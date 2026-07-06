@@ -64,11 +64,15 @@ export const adminApi = {
   getCategory: (id: number) =>
     api.get<ApiResponse<Category>>(`/admin/categories/${id}`),
 
-  createCategory: (data: CategoryParams) =>
-    api.post<ApiResponse<Category>>('/admin/categories', data),
+  createCategory: (data: FormData) =>
+    api.post<ApiResponse<Category>>('/admin/categories', data, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }),
 
-  updateCategory: (id: number, data: Partial<CategoryParams>) =>
-    api.put<ApiResponse<Category>>(`/admin/categories/${id}`, data),
+  updateCategory: (id: number, data: FormData) =>
+    api.put<ApiResponse<Category>>(`/admin/categories/${id}`, data, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }),
 
   deleteCategory: (id: number) =>
     api.delete<ApiResponse<void>>(`/admin/categories/${id}`),
@@ -80,11 +84,15 @@ export const adminApi = {
   getBrand: (id: number) =>
     api.get<ApiResponse<Brand>>(`/admin/brands/${id}`),
 
-  createBrand: (data: BrandParams) =>
-    api.post<ApiResponse<Brand>>('/admin/brands', data),
+  createBrand: (data: FormData) =>
+    api.post<ApiResponse<Brand>>('/admin/brands', data, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }),
 
-  updateBrand: (id: number, data: Partial<BrandParams>) =>
-    api.put<ApiResponse<Brand>>(`/admin/brands/${id}`, data),
+  updateBrand: (id: number, data: FormData) =>
+    api.put<ApiResponse<Brand>>(`/admin/brands/${id}`, data, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }),
 
   deleteBrand: (id: number) =>
     api.delete<ApiResponse<void>>(`/admin/brands/${id}`),

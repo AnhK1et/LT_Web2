@@ -67,7 +67,7 @@ export const CategorySection = () => {
                 transition={{ delay: index * 0.05 }}
               >
                 <Link
-                  to={`/products?category=${category.slug}`}
+                  to={`/products?categoryId=${category.id}`}
                   className="group flex flex-col items-center p-4 bg-accent-50 rounded-xl hover:bg-primary hover:text-white transition-all duration-300"
                 >
                   <span className="text-4xl mb-3 group-hover:scale-110 transition-transform">

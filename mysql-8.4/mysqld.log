@@ -53,3 +53,11 @@
 2026-07-06T10:07:59.146710Z 0 [System] [MY-013602] [Server] Channel mysql_main configured to support TLS. Encrypted connections are now supported for this channel.
 2026-07-06T10:07:59.254710Z 0 [System] [MY-011323] [Server] X Plugin ready for connections. Bind-address: '::' port: 33060
 2026-07-06T10:07:59.254937Z 0 [System] [MY-010931] [Server] D:\laragon\bin\mysql\mysql-8.4.3-winx64\bin\mysqld: ready for connections. Version: '8.4.3'  socket: ''  port: 3306  MySQL Community Server - GPL.
+2026-07-06T13:22:50.450987Z 81 [System] [MY-013172] [Server] Received SHUTDOWN from user root. Shutting down mysqld (Version: 8.4.3).
+2026-07-06T13:22:50.456658Z 0 [System] [MY-013105] [Server] D:\laragon\bin\mysql\mysql-8.4.3-winx64\bin\mysqld: Normal shutdown.
+2026-07-06T13:22:52.481719Z 0 [Warning] [MY-010909] [Server] D:\laragon\bin\mysql\mysql-8.4.3-winx64\bin\mysqld: Forcing close of thread 8  user: 'root'.
+2026-07-06T13:22:52.483134Z 0 [Warning] [MY-010909] [Server] D:\laragon\bin\mysql\mysql-8.4.3-winx64\bin\mysqld: Forcing close of thread 80  user: 'root'.
+2026-07-06T13:22:52.483767Z 0 [Warning] [MY-010909] [Server] D:\laragon\bin\mysql\mysql-8.4.3-winx64\bin\mysqld: Forcing close of thread 76  user: 'root'.
+2026-07-06T13:22:52.484288Z 0 [Warning] [MY-010909] [Server] D:\laragon\bin\mysql\mysql-8.4.3-winx64\bin\mysqld: Forcing close of thread 77  user: 'root'.
+2026-07-06T13:22:52.484865Z 0 [Warning] [MY-010909] [Server] D:\laragon\bin\mysql\mysql-8.4.3-winx64\bin\mysqld: Forcing close of thread 78  user: 'root'.
+2026-07-06T13:22:52.485422Z 0 [Warning] [MY-010909] [Server] D:\laragon\bin\mysql\mysql-8.4.3-winx64\bin\mysqld: Forcing close of thread 79  user: 'root'.

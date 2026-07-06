@@ -14,7 +14,7 @@ interface BrandFormData {
   name: string;
   slug: string;
   description: string;
-  status: string;
+  active: string;
   logo?: FileList;
 }
 
@@ -22,7 +22,7 @@ const defaultFormValues: BrandFormData = {
   name: '',
   slug: '',
   description: '',
-  status: 'ACTIVE',
+  active: 'true',
 };
 
 export default function AdminBrandsPage() {
@@ -57,7 +57,7 @@ export default function AdminBrandsPage() {
       name: brand.name,
       slug: brand.slug,
       description: brand.description || '',
-      status: brand.status || 'ACTIVE',
+      active: brand.active !== false ? 'true' : 'false',
     });
     setIsModalOpen(true);
   };
@@ -68,18 +68,18 @@ export default function AdminBrandsPage() {
   };
 
   const onSubmit = async (data: BrandFormData) => {
-    const formData = new FormData();
-    formData.append('name', data.name);
-    formData.append('slug', data.slug);
-    if (data.description) formData.append('description', data.description);
-    formData.append('status', data.status);
-    if (data.logo?.[0]) formData.append('logo', data.logo[0]);
-
     try {
+      const formData = new FormData();
+      formData.append('name', data.name);
+      formData.append('slug', data.slug);
+      if (data.description) formData.append('description', data.description);
+      formData.append('active', data.active);
+      if (data.logo?.[0]) formData.append('logo', data.logo[0]);
+
       if (selectedBrand) {
-        await updateMutation.mutateAsync({ id: selectedBrand.id, data: Object.fromEntries(formData) as unknown as Partial<Brand> });
+        await updateMutation.mutateAsync({ id: selectedBrand.id, data: formData });
       } else {
-        await createMutation.mutateAsync(Object.fromEntries(formData) as unknown as Partial<Brand>);
+        await createMutation.mutateAsync(formData);
       }
       setIsModalOpen(false);
       reset();
@@ -146,12 +146,12 @@ export default function AdminBrandsPage() {
       render: (item: Brand) => (
         <span
           className={`px-2 py-1 text-xs rounded-full ${
-            item.status === 'ACTIVE'
+            item.active !== false
               ? 'bg-green-100 text-green-700'
               : 'bg-red-100 text-red-700'
           }`}
         >
-          {item.status === 'ACTIVE' ? 'Hoạt động' : 'Không hoạt động'}
+          {item.active !== false ? 'Hoạt động' : 'Không hoạt động'}
         </span>
       ),
     },
@@ -223,11 +223,11 @@ export default function AdminBrandsPage() {
           <div>
             <label className="block text-sm font-medium text-accent-700 mb-1">Trạng thái</label>
             <select
-              {...register('status')}
+              {...register('active')}
               className="w-full px-4 py-2 border border-accent-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
             >
-              <option value="ACTIVE">Hoạt động</option>
-              <option value="INACTIVE">Không hoạt động</option>
+              <option value="true">Hoạt động</option>
+              <option value="false">Không hoạt động</option>
             </select>
           </div>
 

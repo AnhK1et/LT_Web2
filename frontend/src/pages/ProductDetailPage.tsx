@@ -112,7 +112,7 @@ export default function ProductDetailPage() {
             items={[
               { label: 'Sản phẩm', href: '/products' },
               ...(product.category
-                ? [{ label: product.category.name, href: `/products?category=${product.category.slug}` }]
+                ? [{ label: product.category.name, href: `/products?categoryId=${product.category.id}` }]
                 : []),
               { label: product.name },
             ]}

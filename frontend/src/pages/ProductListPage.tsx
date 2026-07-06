@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import { ProductFilter, ProductToolbar, ProductGrid } from '@/components/common';
 import { Pagination, Breadcrumb } from '@/components/ui';
 import { useProducts } from '@/hooks/useProducts';
@@ -35,9 +36,26 @@ export default function ProductListPage() {
   const page = parseInt(searchParams.get('page') || '1');
   const sortBy = searchParams.get('sort') || 'createdAt,desc';
   
-  // Get category and brand from URL
-  const categoryParam = searchParams.get('category');
-  const brandParam = searchParams.get('brand');
+  // Get category and brand from URL (support both old and new param names)
+  const categoryParam = searchParams.get('categoryId') || searchParams.get('category');
+  const brandParam = searchParams.get('brandId') || searchParams.get('brand');
+
+  // Sync URL category/brand params into filters
+  useEffect(() => {
+    setFilters((prev) => {
+      const next = { ...prev };
+      const nextCategoryIds = categoryParam ? [Number(categoryParam)] : [];
+      const nextBrandIds = brandParam ? [Number(brandParam)] : [];
+      if (
+        JSON.stringify(nextCategoryIds) !== JSON.stringify(prev.categoryIds) ||
+        JSON.stringify(nextBrandIds) !== JSON.stringify(prev.brandIds)
+      ) {
+        next.categoryIds = nextCategoryIds;
+        next.brandIds = nextBrandIds;
+      }
+      return next;
+    });
+  }, [categoryParam, brandParam]);
 
   // Build query params
   const queryParams: ProductQueryParams = useMemo(() => {
@@ -70,7 +88,13 @@ export default function ProductListPage() {
   }, [page, sortBy, searchQuery, filters]);
 
   // Fetch products
+  const queryClient = useQueryClient();
   const { data, isLoading } = useProducts(queryParams);
+
+  // Clear product cache when filters change to avoid stale data
+  useEffect(() => {
+    queryClient.removeQueries({ queryKey: ['products'] });
+  }, [categoryParam, brandParam, searchQuery, sortBy, page]);
   const products = data?.data?.content || [];
   const totalPages = data?.data?.totalPages || 1;
   const totalElements = data?.data?.totalElements || 0;
@@ -101,6 +125,9 @@ export default function ProductListPage() {
   // Clear filters
   const handleClearFilters = () => {
     setFilters(initialFilters);
+    if (categoryParam) searchParams.delete('category');
+    if (brandParam) searchParams.delete('brand');
+    setSearchParams(searchParams);
   };
 
   return (

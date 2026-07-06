@@ -252,7 +252,7 @@ export const Header = () => {
                   {categoryList.slice(0, 8).map((category) => (
                     <Link
                       key={category.id}
-                      to={`/products?category=${category.id}`}
+                      to={`/products?categoryId=${category.id}`}
                       className="block px-4 py-2 text-accent-700 hover:bg-accent-50 hover:text-primary transition-colors"
                       onClick={() => setIsCategoryMenuOpen(false)}
                     >
@@ -289,7 +289,7 @@ export const Header = () => {
                   {brandList.slice(0, 8).map((brand) => (
                     <Link
                       key={brand.id}
-                      to={`/products?brand=${brand.id}`}
+                      to={`/products?brandId=${brand.id}`}
                       className="block px-4 py-2 text-accent-700 hover:bg-accent-50 hover:text-primary transition-colors"
                       onClick={() => setIsBrandMenuOpen(false)}
                     >

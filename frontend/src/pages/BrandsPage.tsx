@@ -38,7 +38,7 @@ export default function BrandsPage() {
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ delay: index * 0.03 }}
-                onClick={() => navigate(`/products?brand=${brand.id}`)}
+                onClick={() => navigate(`/products?brandId=${brand.id}`)}
                 className="bg-white rounded-xl p-6 text-center hover:shadow-card hover:-translate-y-1 transition-all cursor-pointer"
               >
                 <div className="w-16 h-16 bg-accent-50 rounded-xl flex items-center justify-center mx-auto mb-4 overflow-hidden">

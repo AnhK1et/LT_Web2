@@ -23,7 +23,7 @@ interface ProductFormData {
   categoryId?: number;
   brandId?: number;
   isFeatured: boolean;
-  status: string;
+  status: 'active' | 'inactive' | 'out_of_stock';
   thumbnail?: FileList;
   images?: FileList;
 }
@@ -38,7 +38,7 @@ const defaultFormValues: ProductFormData = {
   categoryId: undefined,
   brandId: undefined,
   isFeatured: false,
-  status: 'ACTIVE',
+  status: 'active',
 };
 
 export default function AdminProductsPage() {
@@ -95,7 +95,7 @@ export default function AdminProductsPage() {
       categoryId: product.category?.id,
       brandId: product.brand?.id,
       isFeatured: product.isFeatured || false,
-      status: product.status || 'ACTIVE',
+      status: (product.status as ProductFormData['status']) || 'active',
     });
     setIsModalOpen(true);
   };
@@ -116,7 +116,7 @@ export default function AdminProductsPage() {
     if (data.categoryId) formData.append('categoryId', String(data.categoryId));
     if (data.brandId) formData.append('brandId', String(data.brandId));
     formData.append('isFeatured', String(data.isFeatured));
-    formData.append('status', data.status);
+    formData.append('status', (data.status || 'ACTIVE').toLowerCase());
     if (data.thumbnail?.[0]) formData.append('thumbnail', data.thumbnail[0]);
     if (data.images) {
       Array.from(data.images).forEach((file) => {
@@ -171,12 +171,12 @@ export default function AdminProductsPage() {
     {
       key: 'category',
       label: 'Danh mục',
-      render: (item: Product) => item.category?.name || '-',
+      render: (item: Product) => (item as any).categoryName || item.category?.name || '-',
     },
     {
       key: 'brand',
       label: 'Thương hiệu',
-      render: (item: Product) => item.brand?.name || '-',
+      render: (item: Product) => (item as any).brandName || item.brand?.name || '-',
     },
     {
       key: 'price',
@@ -205,12 +205,12 @@ export default function AdminProductsPage() {
       render: (item: Product) => (
         <span
           className={`px-2 py-1 text-xs rounded-full ${
-            item.status === 'ACTIVE'
+            item.status === 'active'
               ? 'bg-green-100 text-green-700'
               : 'bg-red-100 text-red-700'
           }`}
         >
-          {item.status === 'ACTIVE' ? 'Hoạt động' : 'Không hoạt động'}
+          {item.status === 'active' ? 'Hoạt động' : 'Không hoạt động'}
         </span>
       ),
     },
@@ -229,46 +229,71 @@ export default function AdminProductsPage() {
         </div>
 
         {/* Filters */}
-        <div className="bg-white rounded-xl shadow-card p-4 flex flex-wrap gap-4">
-          <Input
-            placeholder="Tìm kiếm sản phẩm..."
-            value={searchKeyword}
-            onChange={(e) => {
-              setSearchKeyword(e.target.value);
-              setPage(1);
-            }}
-            className="w-full sm:w-64"
-          />
-          <select
-            value={categoryFilter || ''}
-            onChange={(e) => {
-              setCategoryFilter(e.target.value ? Number(e.target.value) : undefined);
-              setPage(1);
-            }}
-            className="px-4 py-2 border border-accent-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-          >
-            <option value="">Tất cả danh mục</option>
-            {categories.map((cat) => (
-              <option key={cat.id} value={cat.id}>
-                {cat.name}
-              </option>
-            ))}
-          </select>
-          <select
-            value={brandFilter || ''}
-            onChange={(e) => {
-              setBrandFilter(e.target.value ? Number(e.target.value) : undefined);
-              setPage(1);
-            }}
-            className="px-4 py-2 border border-accent-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-          >
-            <option value="">Tất cả thương hiệu</option>
-            {brands.map((brand) => (
-              <option key={brand.id} value={brand.id}>
-                {brand.name}
-              </option>
-            ))}
-          </select>
+        <div className="bg-white rounded-xl shadow-card p-4 space-y-4">
+          <div className="flex flex-col md:flex-row md:items-end gap-4">
+            <div className="flex-1">
+              <label className="block text-sm font-medium text-accent-700 mb-1">Tìm kiếm</label>
+              <Input
+                placeholder="Tìm theo tên hoặc SKU..."
+                value={searchKeyword}
+                onChange={(e) => {
+                  setSearchKeyword(e.target.value);
+                  setPage(1);
+                }}
+              />
+            </div>
+            <div className="w-full md:w-64">
+              <label className="block text-sm font-medium text-accent-700 mb-1">Danh mục</label>
+              <select
+                value={categoryFilter || ''}
+                onChange={(e) => {
+                  setCategoryFilter(e.target.value ? Number(e.target.value) : undefined);
+                  setPage(1);
+                }}
+                className="w-full px-4 py-2 border border-accent-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+              >
+                <option value="">Tất cả danh mục</option>
+                {categories.map((cat) => (
+                  <option key={cat.id} value={cat.id}>
+                    {cat.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="w-full md:w-64">
+              <label className="block text-sm font-medium text-accent-700 mb-1">Thương hiệu</label>
+              <select
+                value={brandFilter || ''}
+                onChange={(e) => {
+                  setBrandFilter(e.target.value ? Number(e.target.value) : undefined);
+                  setPage(1);
+                }}
+                className="w-full px-4 py-2 border border-accent-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+              >
+                <option value="">Tất cả thương hiệu</option>
+                {brands.map((brand) => (
+                  <option key={brand.id} value={brand.id}>
+                    {brand.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <Button
+                variant="secondary"
+                type="button"
+                onClick={() => {
+                  setSearchKeyword('');
+                  setCategoryFilter(undefined);
+                  setBrandFilter(undefined);
+                  setPage(1);
+                }}
+                className="whitespace-nowrap"
+              >
+                Xóa bộ lọc
+              </Button>
+            </div>
+          </div>
         </div>
 
         {/* Table */}
@@ -374,16 +399,17 @@ export default function AdminProductsPage() {
                 ))}
               </select>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-accent-700 mb-1">Trạng thái</label>
-              <select
-                {...register('status')}
-                className="w-full px-4 py-2 border border-accent-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-              >
-                <option value="ACTIVE">Hoạt động</option>
-                <option value="INACTIVE">Không hoạt động</option>
-              </select>
-            </div>
+          <div>
+            <label className="block text-sm font-medium text-accent-700 mb-1">Trạng thái</label>
+            <select
+              {...register('status')}
+              className="w-full px-4 py-2 border border-accent-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+            >
+              <option value="active">Hoạt động</option>
+              <option value="inactive">Không hoạt động</option>
+              <option value="out_of_stock">Hết hàng</option>
+            </select>
+          </div>
           </div>
 
           <div>

@@ -10,6 +10,10 @@ export const useProducts = (params: ProductQueryParams = {}) => {
       const { data } = await productApi.getAll(params);
       return data;
     },
+    refetchOnMount: true,
+    refetchOnWindowFocus: false,
+    staleTime: 0,
+    gcTime: 0,
   });
 };
 

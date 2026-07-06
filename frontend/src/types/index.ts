@@ -56,7 +56,7 @@ export interface Product {
   images?: string[];
   category?: Category;
   brand?: Brand;
-  status?: string;
+  status?: 'active' | 'inactive' | 'out_of_stock';
   isFeatured?: boolean;
   isNew?: boolean;
   rating?: number;
@@ -73,6 +73,7 @@ export interface Category {
   parent?: Category;
   children?: Category[];
   productCount?: number;
+  active?: boolean;
   status?: string;
 }
 
@@ -83,6 +84,7 @@ export interface Brand {
   description?: string;
   logo?: string;
   productCount?: number;
+  active?: boolean;
   status?: string;
 }
 

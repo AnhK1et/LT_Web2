@@ -48,7 +48,7 @@ export const BrandSection = () => {
               transition={{ delay: index * 0.03 }}
             >
               <Link
-                to={`/products?brand=${brand.slug}`}
+                to={`/products?brandId=${brand.id}`}
                 className="group block bg-accent-50 rounded-xl p-4 hover:bg-primary transition-colors duration-300"
               >
                 <div className="aspect-video flex items-center justify-center mb-2">

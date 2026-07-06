@@ -99,7 +99,7 @@ export const ProductInfo = ({ product, onAddToCart, onBuyNow }: ProductInfoProps
       <div className="flex flex-wrap gap-4 text-sm">
         {product.category && (
           <Link
-            to={`/products?category=${product.category.slug}`}
+            to={`/products?categoryId=${product.category.id}`}
             className="text-primary hover:underline"
           >
             {product.category.name}
@@ -109,7 +109,7 @@ export const ProductInfo = ({ product, onAddToCart, onBuyNow }: ProductInfoProps
           <>
             <span className="text-accent-300">•</span>
             <Link
-              to={`/products?brand=${product.brand.slug}`}
+              to={`/products?brandId=${product.brand.id}`}
               className="text-primary hover:underline"
             >
               {product.brand.name}

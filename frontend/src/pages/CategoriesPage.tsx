@@ -38,7 +38,7 @@ export default function CategoriesPage() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.05 }}
-                onClick={() => navigate(`/products?category=${category.id}`)}
+                onClick={() => navigate(`/products?categoryId=${category.id}`)}
                 className="bg-white rounded-xl p-6 text-center hover:shadow-card hover:-translate-y-1 transition-all cursor-pointer"
               >
                 <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
