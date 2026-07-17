@@ -4,22 +4,25 @@ import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import { productApi } from '@/api';
 import { useAuthStore } from '@/store';
+import { useCart } from '@/hooks/useCart';
 import { ProductGallery, ProductInfo, RelatedProducts } from '@/components/common';
 import { Breadcrumb, Skeleton } from '@/components/ui';
-import Swal from 'sweetalert2';
+import { getImageUrl } from '@/utils';
 
 export default function ProductDetailPage() {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
-  const { isAuthenticated } = useAuthStore();
+  const { addToCart } = useCart();
 
-  const { data, isLoading, isError } = useQuery({
+  const { data, isLoading, isError, error } = useQuery({
     queryKey: ['product', 'slug', slug],
     queryFn: async () => {
       const response = await productApi.getBySlug(slug!);
       return response.data;
     },
     enabled: !!slug,
+    retry: 1,
+    staleTime: 1000 * 60 * 5,
   });
 
   const product = data?.data;
@@ -33,90 +36,84 @@ export default function ProductDetailPage() {
     };
   }, [product]);
 
-  const handleAddToCart = (quantity: number) => {
-    if (!isAuthenticated) {
-      Swal.fire({
-        icon: 'warning',
-        title: 'Vui lòng đăng nhập',
-        text: 'Bạn cần đăng nhập để thêm sản phẩm vào giỏ hàng',
-        confirmButtonText: 'Đăng nhập',
-        confirmButtonColor: '#D70018',
-      }).then((result) => {
-        if (result.isConfirmed) {
-          navigate('/login');
-        }
-      });
-      return;
-    }
-
-    // TODO: Implement add to cart
-    Swal.fire({
-      icon: 'success',
-      title: 'Thêm vào giỏ hàng thành công!',
-      text: `Đã thêm ${quantity} sản phẩm vào giỏ hàng`,
-      timer: 2000,
-      showConfirmButton: false,
-      toast: true,
-      position: 'top-end',
-    });
-  };
-
-  const handleBuyNow = (quantity: number) => {
-    if (!isAuthenticated) {
-      Swal.fire({
-        icon: 'warning',
-        title: 'Vui lòng đăng nhập',
-        text: 'Bạn cần đăng nhập để mua hàng',
-        confirmButtonText: 'Đăng nhập',
-        confirmButtonColor: '#D70018',
-      }).then((result) => {
-        if (result.isConfirmed) {
-          navigate('/login');
-        }
-      });
-      return;
-    }
-
-    // TODO: Add to cart and navigate to checkout
-    navigate('/checkout');
-  };
-
   if (isLoading) {
     return <ProductDetailSkeleton />;
   }
 
   if (isError || !product) {
+    const errMsg = error && typeof error === 'object' && 'response' in error
+      ? (error as { response?: { data?: { message?: string } } }).response?.data?.message
+      : 'Không thể tải sản phẩm. Vui lòng thử lại.';
+
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-accent-900 mb-4">Không tìm thấy sản phẩm</h1>
-          <button
-            onClick={() => navigate('/products')}
-            className="text-primary hover:underline"
-          >
-            Quay lại danh sách sản phẩm
-          </button>
+      <div className="min-h-screen flex items-center justify-center bg-white">
+        <div className="text-center max-w-md mx-auto px-4">
+          <div className="text-6xl mb-4">📦</div>
+          <h1 className="text-2xl font-bold text-accent-900 mb-3">Không tìm thấy sản phẩm</h1>
+          <p className="text-accent-500 mb-6">{errMsg || 'Sản phẩm có thể đã bị xóa hoặc không tồn tại.'}</p>
+          <div className="flex gap-3 justify-center">
+            <button
+              onClick={() => window.location.reload()}
+              className="px-5 py-2.5 bg-accent-100 text-accent-700 rounded-lg hover:bg-accent-200 font-medium transition-colors"
+            >
+              Tải lại
+            </button>
+            <button
+              onClick={() => navigate('/products')}
+              className="px-5 py-2.5 bg-primary text-white rounded-lg hover:bg-primary-700 font-medium transition-colors"
+            >
+              Danh sách sản phẩm
+            </button>
+          </div>
         </div>
       </div>
     );
   }
 
-  const images = product.images?.length ? product.images : [product.thumbnail].filter(Boolean);
+  const rawImages = product.images || [];
+  const imageUrls: string[] = Array.isArray(rawImages) && rawImages.length > 0
+    ? rawImages.map((img: unknown) => {
+        if (typeof img === 'string') return getImageUrl(img);
+        if (img && typeof img === 'object' && 'imageUrl' in img) return getImageUrl((img as { imageUrl: string }).imageUrl);
+        return '/placeholder.svg';
+      })
+    : product.thumbnail
+      ? [getImageUrl(product.thumbnail)]
+      : ['/placeholder.svg'];
 
   return (
     <div className="min-h-screen bg-white">
-      {/* Breadcrumb */}
+      {/* Breadcrumb & Home */}
       <div className="bg-accent-50 border-b border-accent-100">
         <div className="container mx-auto px-4 py-3">
-          <Breadcrumb
-            items={[
-              { label: 'Sản phẩm', href: '/products' },
-              ...(product.category
-                ? [{ label: product.category.name, href: `/products?categoryId=${product.category.id}` }]
-                : []),
-              { label: product.name },
-            ]}
-          />
+          <div className="flex items-center gap-2 text-sm">
+            <button
+              onClick={() => navigate('/')}
+              className="text-accent-600 hover:text-primary transition-colors"
+            >
+              Trang chủ
+            </button>
+            <span className="text-accent-400">/</span>
+            <button
+              onClick={() => navigate('/products')}
+              className="text-accent-600 hover:text-primary transition-colors"
+            >
+              Sản phẩm
+            </button>
+            {product.category && (
+              <>
+                <span className="text-accent-400">/</span>
+                <button
+                  onClick={() => navigate(`/products?categoryId=${product.category.id}`)}
+                  className="text-accent-600 hover:text-primary transition-colors"
+                >
+                  {product.category.name}
+                </button>
+              </>
+            )}
+            <span className="text-accent-400">/</span>
+            <span className="text-accent-900 font-medium truncate">{product.name}</span>
+          </div>
         </div>
       </div>
 
@@ -129,15 +126,20 @@ export default function ProductDetailPage() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
           {/* Gallery */}
           <div>
-            <ProductGallery images={images as string[]} productName={product.name} />
+            <ProductGallery images={imageUrls} productName={product.name} />
           </div>
 
           {/* Info */}
           <div>
             <ProductInfo
               product={product}
-              onAddToCart={handleAddToCart}
-              onBuyNow={handleBuyNow}
+              onAddToCart={async (quantity, variantId) => {
+                await addToCart(product.id, quantity, variantId);
+              }}
+              onBuyNow={async (quantity, variantId) => {
+                await addToCart(product.id, quantity, variantId);
+                navigate('/checkout', { state: { from: 'buy-now' } });
+              }}
             />
           </div>
         </div>

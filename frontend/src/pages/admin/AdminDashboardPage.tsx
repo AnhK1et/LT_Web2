@@ -9,29 +9,68 @@ import {
   RefreshCw,
   TrendingUp,
   TrendingDown,
+  Calendar,
 } from 'lucide-react';
 import { StatCard } from '@/components/admin';
 import { useAdminDashboard, useAdminMonthlyRevenue, useAdminDailyRevenue } from '@/hooks/useAdmin';
-import { formatCurrency } from '@/utils';
+import { formatCurrency, getImageUrl } from '@/utils';
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+  Legend,
+  BarChart,
+  Bar,
+} from 'recharts';
+
+interface RevenuePeriod {
+  period: string;
+  revenue: number;
+  orderCount: number;
+}
 
 export default function AdminDashboardPage() {
+  const [timeRange, setTimeRange] = useState<'7d' | '30d' | '90d'>('30d');
   const { stats, isLoading, error, refetch } = useAdminDashboard();
-  const { revenue: monthlyRevenue, isLoading: monthlyLoading } = useAdminMonthlyRevenue();
-  const { revenue: dailyRevenue, isLoading: dailyLoading } = useAdminDailyRevenue(7);
-
-  console.log('[DashboardPage] Rendering:', { isLoading, error, stats });
+  const { revenue: monthlyRevenue } = useAdminMonthlyRevenue();
+  const { revenue: dailyRevenue } = useAdminDailyRevenue(timeRange === '7d' ? 7 : timeRange === '30d' ? 30 : 90);
 
   if (isLoading) {
-    console.log('[DashboardPage] Showing skeleton...');
     return <DashboardSkeleton />;
   }
 
   if (error) {
-    console.log('[DashboardPage] Showing error:', error);
     return <ErrorState onRetry={refetch} error={error} />;
   }
 
-  console.log('[DashboardPage] Rendering content...');
+  const totalOrders = stats?.totalOrders ?? 0;
+  const completedOrders = stats?.ordersByStatus?.find(s => s.status === 'DELIVERED')?.count ?? 0;
+  const cancelledOrders = stats?.ordersByStatus?.find(s => s.status === 'CANCELLED')?.count ?? 0;
+  const pendingOrders = stats?.ordersByStatus?.find(s => s.status === 'PENDING')?.count ?? 0;
+  const processingOrders = stats?.ordersByStatus?.filter(s => ['CONFIRMED', 'PROCESSING', 'SHIPPING'].includes(s.status)).reduce((acc, s) => acc + s.count, 0) ?? 0;
+  const completionRate = totalOrders > 0 ? Math.round((completedOrders / totalOrders) * 100) : 0;
+
+  // Prepare chart data
+  const orderStatusData = stats?.ordersByStatus?.map(item => ({
+    name: getStatusLabel(item.status),
+    value: item.count,
+    status: item.status,
+  })) || [];
+
+  const pieColors = ['#F59E0B', '#3B82F6', '#8B5CF6', '#F97316', '#10B981', '#EF4444'];
+
+  const dailyChartData = dailyRevenue?.byPeriod?.map(item => ({
+    date: item.period,
+    doanhThu: item.revenue,
+    soDon: item.orderCount,
+  })).reverse() || [];
 
   return (
     <div className="space-y-6">
@@ -50,13 +89,12 @@ export default function AdminDashboardPage() {
           </button>
         </div>
 
-        {/* Stats Grid */}
+        {/* Stats Grid - Tổng quan */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <StatCard
             title="Tổng người dùng"
             value={stats?.totalUsers?.toLocaleString() || '0'}
             icon={Users}
-            trend={stats?.userGrowth}
           />
           <StatCard
             title="Tổng sản phẩm"
@@ -65,7 +103,7 @@ export default function AdminDashboardPage() {
           />
           <StatCard
             title="Tổng đơn hàng"
-            value={stats?.totalOrders?.toLocaleString() || '0'}
+            value={totalOrders.toLocaleString()}
             icon={ShoppingCart}
           />
           <StatCard
@@ -75,130 +113,239 @@ export default function AdminDashboardPage() {
           />
         </div>
 
+        {/* Order Stats - Chi tiết đơn hàng */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="bg-white rounded-xl shadow-card p-5">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm text-accent-500">Đơn hoàn thành</span>
+              <span className="w-9 h-9 rounded-lg bg-green-100 flex items-center justify-center">
+                <TrendingUp className="w-5 h-5 text-green-600" />
+              </span>
+            </div>
+            <p className="text-2xl font-bold text-accent-900">{completedOrders}</p>
+            <p className="text-xs text-accent-500 mt-1">{completionRate}% tổng đơn</p>
+          </div>
+          <div className="bg-white rounded-xl shadow-card p-5">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm text-accent-500">Đơn chờ xử lý</span>
+              <span className="w-9 h-9 rounded-lg bg-yellow-100 flex items-center justify-center">
+                <Package className="w-5 h-5 text-yellow-600" />
+              </span>
+            </div>
+            <p className="text-2xl font-bold text-accent-900">{pendingOrders}</p>
+            <p className="text-xs text-accent-500 mt-1">Cần xác nhận</p>
+          </div>
+          <div className="bg-white rounded-xl shadow-card p-5">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm text-accent-500">Đơn đã hủy</span>
+              <span className="w-9 h-9 rounded-lg bg-red-100 flex items-center justify-center">
+                <TrendingDown className="w-5 h-5 text-red-600" />
+              </span>
+            </div>
+            <p className="text-2xl font-bold text-accent-900">{cancelledOrders}</p>
+            <p className="text-xs text-accent-500 mt-1">
+              {totalOrders > 0 ? Math.round((cancelledOrders / totalOrders) * 100) : 0}% tổng đơn
+            </p>
+          </div>
+          <div className="bg-white rounded-xl shadow-card p-5">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm text-accent-500">Doanh thu thực tế</span>
+              <span className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center">
+                <DollarSign className="w-5 h-5 text-primary" />
+              </span>
+            </div>
+            <p className="text-2xl font-bold text-primary">{formatCurrency(stats?.totalRevenue || 0)}</p>
+            <p className="text-xs text-accent-500 mt-1">Từ đơn đã giao</p>
+          </div>
+        </div>
+
+        {/* Time Range Selector */}
+        <div className="flex items-center gap-2">
+          <Calendar className="w-4 h-4 text-accent-500" />
+          <div className="flex bg-white rounded-lg p-1 shadow-card">
+            {[
+              { key: '7d', label: '7 ngày' },
+              { key: '30d', label: '30 ngày' },
+              { key: '90d', label: '90 ngày' },
+            ].map((opt) => (
+              <button
+                key={opt.key}
+                onClick={() => setTimeRange(opt.key as '7d' | '30d' | '90d')}
+                className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                  timeRange === opt.key
+                    ? 'bg-primary text-white'
+                    : 'text-accent-600 hover:bg-accent-100'
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
         {/* Charts Row */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Order Status Chart */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Revenue Chart - Full Width on large screens */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
-            className="bg-white rounded-xl shadow-card p-6"
+            className="lg:col-span-2 bg-white rounded-xl shadow-card p-6"
           >
-            <h2 className="text-lg font-bold text-accent-900 mb-4">Trạng thái đơn hàng</h2>
-            <div className="space-y-4">
-              {stats?.ordersByStatus && stats.ordersByStatus.length > 0 ? (
-                stats.ordersByStatus.map((item) => {
-                  const total = stats.totalOrders || 1;
-                  const percent = Math.round((item.count / total) * 100);
-                  return (
-                    <div key={item.status}>
-                      <div className="flex justify-between text-sm mb-1">
-                        <span className="text-accent-700">{getStatusLabel(item.status)}</span>
-                        <span className="font-medium text-accent-900">{item.count} ({percent}%)</span>
-                      </div>
-                      <div className="h-3 bg-accent-100 rounded-full overflow-hidden">
-                        <motion.div
-                          initial={{ width: 0 }}
-                          animate={{ width: `${percent}%` }}
-                          transition={{ duration: 0.8, ease: 'easeOut' }}
-                          className={`h-full ${getStatusColor(item.status)}`}
-                        />
-                      </div>
-                    </div>
-                  );
-                })
-              ) : (
-                <p className="text-center text-accent-500 py-4">Chưa có dữ liệu đơn hàng</p>
-              )}
-            </div>
+            <h2 className="text-lg font-bold text-accent-900 mb-4">Doanh thu theo thời gian</h2>
+            {dailyChartData.length > 0 ? (
+              <ResponsiveContainer width="100%" height={280}>
+                <LineChart data={dailyChartData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+                  <XAxis dataKey="date" stroke="#6B7280" fontSize={12} />
+                  <YAxis
+                    stroke="#6B7280"
+                    fontSize={12}
+                    tickFormatter={(value) => `${(value / 1000000).toFixed(0)}M`}
+                  />
+                  <Tooltip
+                    formatter={(value: number) => [formatCurrency(value), 'Doanh thu']}
+                    contentStyle={{ borderRadius: '8px', border: '1px solid #E5E7EB' }}
+                    labelStyle={{ fontWeight: 600 }}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="doanhThu"
+                    stroke="#DC2626"
+                    strokeWidth={3}
+                    dot={{ fill: '#DC2626', strokeWidth: 2, r: 4 }}
+                    activeDot={{ r: 6, fill: '#DC2626' }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="h-[280px] flex items-center justify-center text-accent-500">
+                Chưa có dữ liệu doanh thu
+              </div>
+            )}
           </motion.div>
 
-          {/* Top Products */}
+          {/* Order Status Pie Chart */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
             className="bg-white rounded-xl shadow-card p-6"
           >
-            <h2 className="text-lg font-bold text-accent-900 mb-4">Top sản phẩm bán chạy</h2>
-            <div className="space-y-4">
-              {stats?.topProducts && stats.topProducts.length > 0 ? (
-                stats.topProducts.slice(0, 5).map((product, index) => (
-                  <div key={product.id} className="flex items-center gap-4">
-                    <span className="w-6 h-6 bg-accent-100 rounded-full flex items-center justify-center text-sm font-medium text-accent-600">
+            <h2 className="text-lg font-bold text-accent-900 mb-4">Trạng thái đơn hàng</h2>
+            {orderStatusData.length > 0 ? (
+              <ResponsiveContainer width="100%" height={280}>
+                <PieChart>
+                  <Pie
+                    data={orderStatusData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={60}
+                    outerRadius={100}
+                    paddingAngle={2}
+                    dataKey="value"
+                    label={({ name, percent }) => `${(percent * 100).toFixed(0)}%`}
+                    labelLine={false}
+                  >
+                    {orderStatusData.map((entry, index) => (
+                      <Cell key={entry.status} fill={pieColors[index % pieColors.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip
+                    formatter={(value: number) => [`${value} đơn`, 'Số lượng']}
+                    contentStyle={{ borderRadius: '8px', border: '1px solid #E5E7EB' }}
+                  />
+                  <Legend
+                    formatter={(value) => <span className="text-sm text-accent-600">{value}</span>}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="h-[280px] flex items-center justify-center text-accent-500">
+                Chưa có dữ liệu đơn hàng
+              </div>
+            )}
+          </motion.div>
+        </div>
+
+        {/* Top Products */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4 }}
+          className="bg-white rounded-xl shadow-card p-6"
+        >
+          <h2 className="text-lg font-bold text-accent-900 mb-4">Top sản phẩm bán chạy</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+            {stats?.topProducts && stats.topProducts.length > 0 ? (
+              stats.topProducts.slice(0, 5).map((product, index) => (
+                <div key={product.id} className="border border-accent-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                  <div className="flex items-center gap-3 mb-3">
+                    <span className={`w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold ${
+                      index === 0 ? 'bg-yellow-400 text-white' :
+                      index === 1 ? 'bg-gray-300 text-white' :
+                      index === 2 ? 'bg-amber-600 text-white' :
+                      'bg-accent-100 text-accent-600'
+                    }`}>
                       {index + 1}
                     </span>
                     <img
-                      src={product.thumbnail || '/placeholder.png'}
+                      src={getImageUrl(product.thumbnail)}
                       alt={product.name}
                       className="w-12 h-12 rounded-lg object-cover bg-accent-50"
                     />
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-accent-900 truncate">{product.name}</p>
-                      <p className="text-sm text-accent-500">{product.soldCount} đã bán</p>
-                    </div>
-                    <span className="font-bold text-primary">{formatCurrency(product.price)}</span>
                   </div>
-                ))
-              ) : (
-                <p className="text-center text-accent-500 py-4">Chưa có dữ liệu</p>
-              )}
-            </div>
-          </motion.div>
-        </div>
+                  <p className="font-medium text-accent-900 truncate text-sm">{product.name}</p>
+                  <div className="flex items-center justify-between mt-2">
+                    <span className="text-xs text-accent-500">{product.soldCount} đã bán</span>
+                    <span className="font-bold text-primary text-sm">{formatCurrency(product.price)}</span>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <p className="col-span-full text-center text-accent-500 py-4">Chưa có dữ liệu</p>
+            )}
+          </div>
+        </motion.div>
 
-        {/* Revenue Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Monthly Revenue */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4 }}
-            className="bg-white rounded-xl shadow-card p-6"
-          >
-            <h2 className="text-lg font-bold text-accent-900 mb-4">Doanh thu theo tháng</h2>
-            <div className="space-y-3">
-              {monthlyRevenue?.byPeriod && monthlyRevenue.byPeriod.length > 0 ? (
-                monthlyRevenue.byPeriod.slice(0, 6).map((item, index) => (
-                  <div key={index} className="flex items-center justify-between p-3 bg-accent-50 rounded-lg">
-                    <span className="text-accent-700 font-medium">{item.period}</span>
-                    <div className="text-right">
-                      <span className="font-bold text-primary">{formatCurrency(item.revenue)}</span>
-                      <span className="text-xs text-accent-500 ml-2">{item.orderCount} đơn</span>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <p className="text-center text-accent-500 py-4">Chưa có dữ liệu doanh thu</p>
-              )}
+        {/* Monthly Revenue Bar Chart */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.5 }}
+          className="bg-white rounded-xl shadow-card p-6"
+        >
+          <h2 className="text-lg font-bold text-accent-900 mb-4">Doanh thu theo tháng</h2>
+          {monthlyRevenue?.byPeriod && monthlyRevenue.byPeriod.length > 0 ? (
+            <ResponsiveContainer width="100%" height={250}>
+              <BarChart data={monthlyRevenue.byPeriod.slice(0, 6).map(item => ({
+                thang: item.period,
+                doanhThu: item.revenue,
+                soDon: item.orderCount,
+              })).reverse()}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+                <XAxis dataKey="thang" stroke="#6B7280" fontSize={12} />
+                <YAxis
+                  stroke="#6B7280"
+                  fontSize={12}
+                  tickFormatter={(value) => `${(value / 1000000).toFixed(0)}M`}
+                />
+                <Tooltip
+                  formatter={(value: number, name: string) => [
+                    name === 'doanhThu' ? formatCurrency(value) : value,
+                    name === 'doanhThu' ? 'Doanh thu' : 'Số đơn'
+                  ]}
+                  contentStyle={{ borderRadius: '8px', border: '1px solid #E5E7EB' }}
+                />
+                <Bar dataKey="doanhThu" fill="#DC2626" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="h-[250px] flex items-center justify-center text-accent-500">
+              Chưa có dữ liệu doanh thu theo tháng
             </div>
-          </motion.div>
-
-          {/* Daily Revenue */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.5 }}
-            className="bg-white rounded-xl shadow-card p-6"
-          >
-            <h2 className="text-lg font-bold text-accent-900 mb-4">Doanh thu 7 ngày gần nhất</h2>
-            <div className="space-y-3">
-              {dailyRevenue?.byPeriod && dailyRevenue.byPeriod.length > 0 ? (
-                dailyRevenue.byPeriod.slice(0, 7).map((item, index) => (
-                  <div key={index} className="flex items-center justify-between p-3 bg-accent-50 rounded-lg">
-                    <span className="text-accent-700 font-medium">{item.period}</span>
-                    <div className="text-right">
-                      <span className="font-bold text-primary">{formatCurrency(item.revenue)}</span>
-                      <span className="text-xs text-accent-500 ml-2">{item.orderCount} đơn</span>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <p className="text-center text-accent-500 py-4">Chưa có dữ liệu</p>
-              )}
-            </div>
-          </motion.div>
-        </div>
+          )}
+        </motion.div>
 
         {/* Low Stock Products */}
         <motion.div
@@ -274,12 +421,13 @@ const getStatusLabel = (status: string) => {
     PENDING: 'Chờ xác nhận',
     CONFIRMED: 'Đã xác nhận',
     PROCESSING: 'Đang xử lý',
-    SHIPPING: 'Đang giao',
+    SHIPPING: 'Đang giao hàng',
     DELIVERED: 'Đã giao',
     CANCELLED: 'Đã hủy',
     RETURNED: 'Trả hàng',
   };
-  return labels[status] || status;
+  const upperStatus = status.toUpperCase();
+  return labels[upperStatus] || status;
 };
 
 const getStatusColor = (status: string) => {
@@ -292,5 +440,6 @@ const getStatusColor = (status: string) => {
     CANCELLED: 'bg-red-400',
     RETURNED: 'bg-purple-400',
   };
-  return colors[status] || 'bg-gray-400';
+  const upperStatus = status.toUpperCase();
+  return colors[upperStatus] || 'bg-gray-400';
 };

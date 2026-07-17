@@ -5,7 +5,7 @@ import { cn } from '@/utils';
 import { useAuthStore, useCartStore } from '@/store';
 import { Button } from '@/components/ui';
 import { useAuth } from '@/hooks/useAuth';
-import { useActiveCategories, useActiveBrands } from '@/hooks/useProducts';
+import { useActiveCategories, useActiveBrands, useSearchSuggestions } from '@/hooks/useProducts';
 
 export const Header = () => {
   const navigate = useNavigate();
@@ -22,13 +22,19 @@ export const Header = () => {
 
   const { data: categories } = useActiveCategories();
   const { data: brands } = useActiveBrands();
+  const { data: suggestions } = useSearchSuggestions(searchQuery);
   const categoryList = Array.isArray(categories) ? categories : [];
   const brandList = Array.isArray(brands) ? brands : [];
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const searchRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
         setIsUserMenuOpen(false);
+      }
+      if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
+        setShowSuggestions(false);
       }
       // Close dropdown menus when clicking outside
       if (!event.target || !(event.target as HTMLElement).closest('.category-dropdown')) {
@@ -88,13 +94,17 @@ export const Header = () => {
           </Link>
 
           {/* Search Bar */}
-          <form onSubmit={handleSearch} className="flex-1 max-w-2xl">
-            <div className="relative">
+          <div className="flex-1 max-w-2xl relative" ref={searchRef}>
+            <form onSubmit={handleSearch} className="relative">
               <input
                 type="text"
                 placeholder="Tìm kiếm sản phẩm..."
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setShowSuggestions(true);
+                }}
+                onFocus={() => setShowSuggestions(true)}
                 className="w-full px-4 py-3 pr-12 border-2 border-accent-200 rounded-xl focus:border-primary focus:outline-none transition-colors"
               />
               <button
@@ -103,8 +113,46 @@ export const Header = () => {
               >
                 <Search className="w-5 h-5" />
               </button>
-            </div>
-          </form>
+            </form>
+
+            {/* Search Suggestions Dropdown */}
+            {showSuggestions && searchQuery.trim().length >= 2 && suggestions && suggestions.length > 0 && (
+              <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-xl shadow-lg border border-accent-100 py-2 z-50 max-h-96 overflow-y-auto">
+                {suggestions.map((product) => (
+                  <Link
+                    key={product.id}
+                    to={`/products/${product.slug || product.id}`}
+                    className="flex items-center gap-3 px-4 py-2 hover:bg-accent-50 transition-colors"
+                    onClick={() => {
+                      setShowSuggestions(false);
+                      setSearchQuery('');
+                    }}
+                  >
+                    {product.thumbnail && (
+                      <img
+                        src={product.thumbnail}
+                        alt={product.name}
+                        className="w-10 h-10 object-cover rounded"
+                      />
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-accent-900 truncate">{product.name}</p>
+                      <p className="text-sm text-primary font-medium">
+                        {product.price?.toLocaleString('vi-VN')}đ
+                      </p>
+                    </div>
+                  </Link>
+                ))}
+                <Link
+                  to={`/products?search=${encodeURIComponent(searchQuery)}`}
+                  className="block px-4 py-2 text-center text-primary font-medium hover:bg-accent-50 border-t border-accent-100"
+                  onClick={() => setShowSuggestions(false)}
+                >
+                  Xem tất cả kết quả cho "{searchQuery}"
+                </Link>
+              </div>
+            )}
+          </div>
 
           {/* Actions */}
           <div className="flex items-center gap-4">

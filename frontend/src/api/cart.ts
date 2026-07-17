@@ -4,6 +4,7 @@ import type { ApiResponse, Cart } from '@/types';
 export interface AddToCartRequest {
   productId: number;
   quantity: number;
+  variantId?: number;
 }
 
 export interface UpdateCartItemRequest {
@@ -11,11 +12,13 @@ export interface UpdateCartItemRequest {
 }
 
 export interface CartCheckoutRequest {
-  shippingAddress: string;
-  shippingPhone: string;
-  shippingName: string;
+  receiverName: string;
+  phone: string;
+  address: string;
+  city?: string;
+  district?: string;
+  paymentMethodCode: string;
   note?: string;
-  paymentMethod: string;
 }
 
 export const cartApi = {

@@ -18,7 +18,7 @@ export const useAdminProducts = (params?: {
     error,
     refetch,
   } = useQuery({
-    queryKey: ['admin-products', params],
+    queryKey: ['admin-products', params?.page ?? 0, params?.size ?? 10, params?.keyword, params?.categoryId, params?.brandId],
     queryFn: async () => {
       const response = await adminApi.getProducts(params);
       return response.data;
@@ -161,7 +161,7 @@ export const useUpdateCategory = () => {
 
   return useMutation({
     mutationFn: async ({ id, data }: { id: number; data: Partial<Category> }) => {
-      const response = await adminApi.updateCategory(id, data);
+      const response = await adminApi.updateCategory(id, data as CategoryParams);
       return response.data;
     },
     onSuccess: () => {
@@ -222,8 +222,8 @@ export const useCreateBrand = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (data: Partial<Brand>) => {
-      const response = await adminApi.createBrand(data as BrandParams);
+    mutationFn: async (formData: FormData) => {
+      const response = await adminApi.createBrand(formData);
       return response.data;
     },
     onSuccess: () => {
@@ -241,7 +241,7 @@ export const useUpdateBrand = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ id, data }: { id: number; data: Partial<Brand> }) => {
+    mutationFn: async ({ id, data }: { id: number; data: FormData }) => {
       const response = await adminApi.updateBrand(id, data);
       return response.data;
     },
@@ -282,7 +282,7 @@ export const useAdminOrders = (params?: { page?: number; size?: number; status?:
     error,
     refetch,
   } = useQuery({
-    queryKey: ['admin-orders', params],
+    queryKey: ['admin-orders', params?.page ?? 0, params?.size ?? 10, params?.status] as const,
     queryFn: async () => {
       const response = await adminApi.getOrders(params);
       return response.data;
@@ -350,7 +350,7 @@ export const useAdminUsers = (params?: { page?: number; size?: number; keyword?:
     error,
     refetch,
   } = useQuery({
-    queryKey: ['admin-users', params],
+    queryKey: ['admin-users', params?.page ?? 0, params?.size ?? 10, params?.keyword, params?.role] as const,
     queryFn: async () => {
       const response = await adminApi.getUsers(params);
       return response.data;
@@ -394,25 +394,16 @@ export const useAdminDashboard = () => {
     error,
     refetch,
   } = useQuery({
-    queryKey: ['admin-dashboard'],
+    queryKey: ['admin-dashboard'] as const,
     queryFn: async () => {
-      console.log('[Dashboard Hook] Calling API...');
-      try {
-        const response = await adminApi.getDashboard();
-        console.log('[Dashboard Hook] Response received:', response.data);
-        return response.data;
-      } catch (err: unknown) {
-        console.error('[Dashboard Hook] API Error:', err);
-        throw err;
-      }
+      const response = await adminApi.getDashboard();
+      return response.data.data; // Return DashboardStats directly
     },
     retry: 1,
   });
 
-  console.log('[Dashboard Hook] Current state:', { data, isLoading, error });
-
   return {
-    stats: data?.data,
+    stats: data,
     isLoading,
     error,
     refetch,
@@ -426,22 +417,16 @@ export const useAdminMonthlyRevenue = () => {
     error,
     refetch,
   } = useQuery({
-    queryKey: ['admin-revenue-monthly'],
+    queryKey: ['admin-revenue-monthly'] as const,
     queryFn: async () => {
-      try {
-        const response = await adminApi.getMonthlyRevenue();
-        console.log('[Monthly Revenue API] Response:', response.data);
-        return response.data;
-      } catch (err: unknown) {
-        console.error('[Monthly Revenue API] Error:', err);
-        throw err;
-      }
+      const response = await adminApi.getMonthlyRevenue();
+      return response.data.data; // Return RevenueData directly
     },
     retry: 1,
   });
 
   return {
-    revenue: data?.data,
+    revenue: data,
     isLoading,
     error,
     refetch,
@@ -455,22 +440,16 @@ export const useAdminDailyRevenue = (days = 30) => {
     error,
     refetch,
   } = useQuery({
-    queryKey: ['admin-revenue-daily', days],
+    queryKey: ['admin-revenue-daily', days] as const,
     queryFn: async () => {
-      try {
-        const response = await adminApi.getDailyRevenue(days);
-        console.log('[Daily Revenue API] Response:', response.data);
-        return response.data;
-      } catch (err: unknown) {
-        console.error('[Daily Revenue API] Error:', err);
-        throw err;
-      }
+      const response = await adminApi.getDailyRevenue(days);
+      return response.data.data; // Return RevenueData directly
     },
     retry: 1,
   });
 
   return {
-    revenue: data?.data,
+    revenue: data,
     isLoading,
     error,
     refetch,
@@ -484,22 +463,16 @@ export const useAdminTopProducts = (limit = 10) => {
     error,
     refetch,
   } = useQuery({
-    queryKey: ['admin-top-products', limit],
+    queryKey: ['admin-top-products', limit] as const,
     queryFn: async () => {
-      try {
-        const response = await adminApi.getTopProducts(limit);
-        console.log('[Top Products API] Response:', response.data);
-        return response.data;
-      } catch (err: unknown) {
-        console.error('[Top Products API] Error:', err);
-        throw err;
-      }
+      const response = await adminApi.getTopProducts(limit);
+      return response.data.data; // Return TopProduct[] directly
     },
     retry: 1,
   });
 
   return {
-    products: data?.data || [],
+    products: data || [],
     isLoading,
     error,
     refetch,
@@ -513,24 +486,113 @@ export const useAdminLowStock = (threshold = 10, limit = 20) => {
     error,
     refetch,
   } = useQuery({
-    queryKey: ['admin-low-stock', threshold, limit],
+    queryKey: ['admin-low-stock', threshold, limit] as const,
     queryFn: async () => {
-      try {
-        const response = await adminApi.getLowStock(threshold, limit);
-        console.log('[Low Stock API] Response:', response.data);
-        return response.data;
-      } catch (err: unknown) {
-        console.error('[Low Stock API] Error:', err);
-        throw err;
-      }
+      const response = await adminApi.getLowStock(threshold, limit);
+      return response.data.data; // Return LowStockProduct[] directly
     },
     retry: 1,
   });
 
   return {
-    products: data?.data || [],
+    products: data || [],
     isLoading,
     error,
     refetch,
   };
+};
+
+// Inventory logs
+export const useProductInventoryLogs = (productId?: number, params?: { page?: number; size?: number }) => {
+  const {
+    data,
+    isLoading,
+    error,
+  } = useQuery({
+    queryKey: ['admin-product-inventory-logs', productId, params?.page ?? 0, params?.size ?? 10] as const,
+    queryFn: async () => {
+      if (!productId) return null;
+      const response = await adminApi.getProductInventoryLogs(productId, params);
+      return response.data;
+    },
+    enabled: !!productId,
+  });
+
+  return {
+    logs: data?.content || [],
+    totalPages: data?.totalPages || 1,
+    totalElements: data?.totalElements || 0,
+    isLoading,
+    error,
+  };
+};
+
+export const useVariantInventoryLogs = (variantId?: number, params?: { page?: number; size?: number }) => {
+  const {
+    data,
+    isLoading,
+    error,
+  } = useQuery({
+    queryKey: ['admin-variant-inventory-logs', variantId, params?.page ?? 0, params?.size ?? 10] as const,
+    queryFn: async () => {
+      if (!variantId) return null;
+      const response = await adminApi.getVariantInventoryLogs(variantId, params);
+      return response.data;
+    },
+    enabled: !!variantId,
+  });
+
+  return {
+    logs: data?.content || [],
+    totalPages: data?.totalPages || 1,
+    totalElements: data?.totalElements || 0,
+    isLoading,
+    error,
+  };
+};
+
+// Inventory actions
+export const useAdjustProductStock = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ productId, quantity, changeType, note }: { productId: number; quantity: number; changeType: string; note?: string }) => {
+      const response = await adminApi.adjustProductStock(productId, { quantity, changeType, note });
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-products'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-product'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-product-inventory-logs'] });
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+      queryClient.invalidateQueries({ queryKey: ['product'] });
+      Swal.fire({ icon: 'success', title: 'Cập nhật tồn kho thành công!', timer: 2000, showConfirmButton: false });
+    },
+    onError: (error: unknown) => {
+      const err = error as { response?: { data?: { message?: string } } };
+      Swal.fire({ icon: 'error', title: 'Lỗi', text: err.response?.data?.message || 'Đã xảy ra lỗi' });
+    },
+  });
+};
+
+export const useAdjustVariantStock = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ variantId, quantity, changeType, note }: { variantId: number; quantity: number; changeType: string; note?: string }) => {
+      const response = await adminApi.adjustVariantStock(variantId, { quantity, changeType, note });
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-products'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-variant-inventory-logs'] });
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+      queryClient.invalidateQueries({ queryKey: ['product'] });
+      Swal.fire({ icon: 'success', title: 'Cập nhật tồn kho thành công!', timer: 2000, showConfirmButton: false });
+    },
+    onError: (error: unknown) => {
+      const err = error as { response?: { data?: { message?: string } } };
+      Swal.fire({ icon: 'error', title: 'Lỗi', text: err.response?.data?.message || 'Đã xảy ra lỗi' });
+    },
+  });
 };

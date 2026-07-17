@@ -56,8 +56,6 @@ export default function ContactPage() {
     // Simulate API call
     await new Promise((resolve) => setTimeout(resolve, 1500));
     
-    console.log('Contact form submitted:', data);
-    
     Swal.fire({
       icon: 'success',
       title: 'Gửi liên hệ thành công!',

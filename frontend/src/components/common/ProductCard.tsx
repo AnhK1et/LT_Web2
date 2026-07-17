@@ -1,8 +1,9 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ShoppingCart, Zap, Star } from 'lucide-react';
-import { formatCurrency, calculateDiscount } from '@/utils';
-import { Badge, Skeleton } from '@/components/ui';
+import { formatCurrency, calculateDiscount, getImageUrl } from '@/utils';
+import { Badge } from '@/components/ui';
 import type { Product } from '@/types';
 
 interface ProductCardProps {
@@ -11,6 +12,7 @@ interface ProductCardProps {
 }
 
 export const ProductCard = ({ product, onAddToCart }: ProductCardProps) => {
+  const [imgError, setImgError] = useState(false);
   const hasDiscount = product.salePrice && product.salePrice < product.price;
   const discountPercent = hasDiscount
     ? calculateDiscount(product.price, product.salePrice!)
@@ -18,7 +20,16 @@ export const ProductCard = ({ product, onAddToCart }: ProductCardProps) => {
   const displayPrice = hasDiscount ? product.salePrice : product.price;
   const isNew = product.isNew;
   const rating = product.rating || 4.5;
-  const soldCount = product.soldCount || Math.floor(Math.random() * 500) + 50;
+  const soldCount = product.soldCount || 100;
+  const variants = product.variants || [];
+  const variantStock = variants.reduce((sum, v) => sum + (v.stock || 0), 0);
+  const stock = variants.length > 0 ? variantStock : (product.quantity || 0);
+  const isInStock = stock > 0;
+
+  const getInitials = (name: string) => {
+    const words = name.split(' ').slice(0, 2);
+    return words.map(w => w[0]).join('').toUpperCase();
+  };
 
   return (
     <motion.div
@@ -29,11 +40,22 @@ export const ProductCard = ({ product, onAddToCart }: ProductCardProps) => {
       {/* Image Container */}
       <Link to={`/products/${product.slug}`} className="block relative">
         <div className="aspect-square overflow-hidden bg-accent-50">
-          <img
-            src={product.thumbnail || '/placeholder.png'}
-            alt={product.name}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-          />
+          {imgError ? (
+            <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-accent-100 to-accent-200">
+              <div className="text-center">
+                <div className="w-16 h-16 mx-auto mb-2 rounded-xl bg-accent-300 flex items-center justify-center">
+                  <span className="text-xl font-bold text-accent-600">{getInitials(product.name)}</span>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <img
+              src={getImageUrl(product.thumbnail)}
+              alt={product.name}
+              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+              onError={() => setImgError(true)}
+            />
+          )}
         </div>
         
         {/* Badges */}
@@ -72,7 +94,7 @@ export const ProductCard = ({ product, onAddToCart }: ProductCardProps) => {
         {/* Price */}
         <div className="mt-2 flex items-baseline gap-2">
           <span className="text-xl font-bold text-primary">
-            {formatCurrency(displayPrice!)}
+            {formatCurrency(displayPrice || 0)}
           </span>
           {hasDiscount && (
             <span className="text-sm text-accent-400 line-through">
@@ -88,6 +110,10 @@ export const ProductCard = ({ product, onAddToCart }: ProductCardProps) => {
             <span>{rating.toFixed(1)}</span>
           </div>
           <span>Đã bán {soldCount}</span>
+          <span className="text-accent-300">|</span>
+          <span className={isInStock ? 'text-emerald-600' : 'text-red-500'}>
+            {isInStock ? `Còn ${stock}` : 'Hết hàng'}
+          </span>
         </div>
 
         {/* Actions */}
@@ -97,16 +123,18 @@ export const ProductCard = ({ product, onAddToCart }: ProductCardProps) => {
               e.preventDefault();
               onAddToCart?.(product);
             }}
-            className="flex items-center justify-center gap-1.5 py-2 px-3 bg-accent-100 text-accent-700 rounded-lg hover:bg-primary hover:text-white transition-colors text-sm font-medium"
+            disabled={!isInStock}
+            className="flex items-center justify-center gap-1.5 py-2 px-3 bg-accent-100 text-accent-700 rounded-lg hover:bg-primary hover:text-white transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <ShoppingCart className="w-4 h-4" />
             <span className="hidden sm:inline">Giỏ hàng</span>
           </button>
           <Link
             to={`/products/${product.slug}`}
-            className="flex items-center justify-center py-2 px-3 bg-primary text-white rounded-lg hover:bg-primary-700 transition-colors text-sm font-medium"
+            className="flex items-center justify-center py-2 px-3 bg-primary text-white rounded-lg hover:bg-primary-700 transition-colors text-sm font-medium disabled:opacity-50"
+            aria-disabled={!isInStock}
           >
-            Mua ngay
+            {isInStock ? 'Mua ngay' : 'Hết hàng'}
           </Link>
         </div>
       </div>

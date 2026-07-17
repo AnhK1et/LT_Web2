@@ -5,12 +5,13 @@ import { CheckoutForm, OrderSummary, SuccessDialog } from '@/components/common';
 import { Breadcrumb } from '@/components/ui';
 import { useCart } from '@/hooks/useCart';
 import { useAuthStore } from '@/store';
+import { paymentApi } from '@/api/payment';
 import Swal from 'sweetalert2';
 
 export default function CheckoutPage() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { isAuthenticated, user } = useAuthStore();
+  const { isAuthenticated } = useAuthStore();
   
   const {
     items,
@@ -20,10 +21,13 @@ export default function CheckoutPage() {
     isCheckingOut,
     checkout,
     refetch,
+    setSelectedItems,
   } = useCart();
 
   const [showSuccess, setShowSuccess] = useState(false);
   const [orderData, setOrderData] = useState<{ orderId?: number; orderCode?: string } | null>(null);
+
+  const [isResolvingBuyNow, setIsResolvingBuyNow] = useState(false);
 
   // Check authentication
   useEffect(() => {
@@ -32,12 +36,98 @@ export default function CheckoutPage() {
     }
   }, [isAuthenticated, navigate]);
 
-  // If coming from cart, select all items if none selected
+  // If coming from cart or buy-now, select all items if none selected
   useEffect(() => {
-    if (location.state?.from === 'cart' && selectedItems.length === 0 && items.length > 0) {
-      // Select all items for checkout
+    if ((location.state?.from === 'cart' || location.state?.from === 'buy-now') && selectedItems.length === 0 && items.length > 0) {
+      setSelectedItems(items.map((item) => item.id));
     }
-  }, [location.state, selectedItems.length, items.length]);
+  }, [location.state, selectedItems.length, items.length, setSelectedItems]);
+
+  // Resolve buy-now by refetching cart if needed
+  useEffect(() => {
+    let cancelled = false;
+    const resolveBuyNow = async () => {
+      if (location.state?.from !== 'buy-now' || isResolvingBuyNow) return;
+      if (items.length > 0 || isLoading) return;
+
+      setIsResolvingBuyNow(true);
+      try {
+        await refetch();
+      } finally {
+        if (!cancelled) {
+          setIsResolvingBuyNow(false);
+        }
+      }
+    };
+
+    void resolveBuyNow();
+    return () => {
+      cancelled = true;
+    };
+  }, [location.state?.from, items.length, isLoading, refetch, isResolvingBuyNow]);
+
+  // Handle VNPAY payment redirect
+  const handleVnpayPayment = async (data: {
+    shippingName: string;
+    shippingPhone: string;
+    shippingAddress: string;
+    note: string;
+    paymentMethod: string;
+  }) => {
+    if (!hasItemsToCheckout) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Không có sản phẩm',
+        text: 'Vui lòng chọn sản phẩm để thanh toán',
+      });
+      return;
+    }
+
+    try {
+      // First create the order (pending payment)
+      const result = await checkout({
+        receiverName: data.shippingName,
+        phone: data.shippingPhone,
+        address: data.shippingAddress,
+        note: data.note,
+        paymentMethodCode: 'VNPAY',
+      });
+
+      // Get orderId from response
+      const responseData = result as { data?: { orderId?: number; orderCode?: string } };
+      const orderId = responseData.data?.orderId;
+
+      if (!orderId) {
+        throw new Error('Không lấy được thông tin đơn hàng');
+      }
+
+      // Call VNPAY API to create payment URL
+      const vnpayResponse = await paymentApi.createVnpayPayment({
+        orderId: orderId,
+        amount: totals.total,
+        orderInfo: `Thanh toan don hang ${responseData.data?.orderCode}`,
+      });
+
+      const paymentUrl = vnpayResponse.data?.data?.paymentUrl;
+      
+      if (paymentUrl) {
+        // Redirect to VNPAY
+        window.location.href = paymentUrl;
+      } else {
+        throw new Error('Không tạo được link thanh toán VNPAY');
+      }
+
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } }; message?: string };
+      Swal.fire({
+        icon: 'error',
+        title: 'Thanh toán thất bại',
+        text: err.response?.data?.message || err.message || 'Đã xảy ra lỗi. Vui lòng thử lại.',
+        confirmButtonText: 'Đóng',
+        confirmButtonColor: '#D70018',
+      });
+    }
+  };
 
   // Filter selected items
   const selectedCartItems = items.filter((item) => selectedItems.includes(item.id));
@@ -59,13 +149,19 @@ export default function CheckoutPage() {
       return;
     }
 
+    // If VNPAY, handle separately
+    if (data.paymentMethod === 'VNPAY') {
+      await handleVnpayPayment(data);
+      return;
+    }
+
     try {
       const result = await checkout({
-        shippingName: data.shippingName,
-        shippingPhone: data.shippingPhone,
-        shippingAddress: data.shippingAddress,
+        receiverName: data.shippingName,
+        phone: data.shippingPhone,
+        address: data.shippingAddress,
         note: data.note,
-        paymentMethod: data.paymentMethod,
+        paymentMethodCode: data.paymentMethod,
       });
 
       // Refresh cart

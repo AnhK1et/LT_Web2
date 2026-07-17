@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { AdminTable } from '@/components/admin';
 import { Button, Input } from '@/components/ui';
 import { useAdminUsers, useUpdateUserStatus } from '@/hooks/useAdmin';
@@ -9,12 +9,14 @@ export default function AdminUsersPage() {
   const [searchKeyword, setSearchKeyword] = useState('');
   const [roleFilter, setRoleFilter] = useState<string | undefined>();
 
-  const { users, totalPages, totalElements, isLoading, refetch } = useAdminUsers({
+  const queryParams = useMemo(() => ({
     page: page - 1,
     size: 10,
     keyword: searchKeyword,
     role: roleFilter,
-  });
+  }), [page, searchKeyword, roleFilter]);
+
+  const { users, totalPages, totalElements, isLoading, refetch } = useAdminUsers(queryParams);
 
   const updateStatusMutation = useUpdateUserStatus();
 

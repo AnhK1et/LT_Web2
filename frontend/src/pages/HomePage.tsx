@@ -26,9 +26,6 @@ export default function HomePage() {
       {/* New Products */}
       <NewProductSection />
 
-      {/* Brands */}
-      <BrandSection />
-
       {/* Features */}
       <FeatureSection />
     </div>

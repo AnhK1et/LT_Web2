@@ -36,8 +36,8 @@ export const useCart = () => {
 
   // Add to cart mutation
   const addToCartMutation = useMutation({
-    mutationFn: async ({ productId, quantity }: { productId: number; quantity: number }) => {
-      const response = await cartApi.addItem({ productId, quantity });
+    mutationFn: async ({ productId, quantity, variantId }: { productId: number; quantity: number; variantId?: number }) => {
+      const response = await cartApi.addItem({ productId, quantity, variantId });
       return response.data;
     },
     onSuccess: () => {
@@ -135,17 +135,24 @@ export const useCart = () => {
   // Checkout mutation
   const checkoutMutation = useMutation({
     mutationFn: async (checkoutData: {
-      shippingAddress: string;
-      shippingPhone: string;
-      shippingName: string;
+      receiverName: string;
+      phone: string;
+      address: string;
+      city?: string;
+      district?: string;
+      paymentMethodCode: string;
       note?: string;
-      paymentMethod: string;
     }) => {
       const response = await cartApi.checkout(checkoutData);
       return response.data;
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['cart'] });
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+      queryClient.invalidateQueries({ queryKey: ['product'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-products'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-product'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-orders'] });
       setSelectedItems([]);
       return data;
     },
@@ -153,7 +160,7 @@ export const useCart = () => {
 
   // Actions
   const addToCart = useCallback(
-    async (productId: number, quantity: number = 1) => {
+    async (productId: number, quantity: number = 1, variantId?: number) => {
       if (!isAuthenticated) {
         Swal.fire({
           icon: 'warning',
@@ -164,7 +171,7 @@ export const useCart = () => {
         });
         return;
       }
-      await addToCartMutation.mutateAsync({ productId, quantity });
+      await addToCartMutation.mutateAsync({ productId, quantity, variantId });
     },
     [isAuthenticated, addToCartMutation]
   );
@@ -214,11 +221,13 @@ export const useCart = () => {
 
   const checkout = useCallback(
     async (checkoutData: {
-      shippingAddress: string;
-      shippingPhone: string;
-      shippingName: string;
+      receiverName: string;
+      phone: string;
+      address: string;
+      city?: string;
+      district?: string;
+      paymentMethodCode: string;
       note?: string;
-      paymentMethod: string;
     }) => {
       return await checkoutMutation.mutateAsync(checkoutData);
     },

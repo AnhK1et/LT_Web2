@@ -62,6 +62,7 @@ export interface Product {
   rating?: number;
   reviewCount?: number;
   createdAt?: string;
+  variants?: ProductVariant[];
 }
 
 export interface Category {
@@ -90,9 +91,17 @@ export interface Brand {
 
 export interface CartItem {
   id: number;
-  product: Product;
+  productId?: number;
+  productName?: string;
+  productSlug?: string;
+  productImage?: string;
+  sku?: string;
   quantity: number;
   price: number;
+  subtotal?: number;
+  stockAvailable?: number;
+  inStock?: boolean;
+  product: Product;
 }
 
 export interface Cart {
@@ -196,6 +205,17 @@ export interface LowStockProduct {
   quantity: number;
 }
 
+export interface ProductVariant {
+  id: number;
+  name?: string;
+  capacity: string;
+  sku?: string;
+  priceAdjustment?: number;
+  stock?: number;
+  isDefault?: boolean;
+  deletedAt?: string | null;
+}
+
 export interface RevenueData {
   total: number;
   subtotal: number;
@@ -207,4 +227,51 @@ export interface RevenueData {
     revenue: number;
     orderCount: number;
   }[];
+}
+
+export interface InventoryLog {
+  id: number;
+  productId: number;
+  productName?: string;
+  variantId?: number;
+  variantName?: string;
+  changeType: string;
+  quantityChange: number;
+  previousQuantity?: number;
+  newQuantity?: number;
+  referenceType?: string;
+  referenceId?: number;
+  note?: string;
+  createdBy?: string;
+  createdAt: string;
+}
+
+export interface Banner {
+  id: number;
+  title: string;
+  subtitle?: string;
+  imageUrl: string;
+  link?: string;
+  linkType?: string;
+  targetId?: number;
+  displayOrder: number;
+  status: string;
+  active?: boolean;
+  startDate?: string;
+  endDate?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface BannerFormData {
+  title: string;
+  subtitle?: string;
+  imageUrl: string;
+  link?: string;
+  linkType?: string;
+  targetId?: number;
+  displayOrder?: number;
+  active?: boolean;
+  startDate?: string;
+  endDate?: string;
 }

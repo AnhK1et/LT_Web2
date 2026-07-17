@@ -10,40 +10,27 @@ interface ProtectedRouteProps {
   redirectTo?: string;
 }
 
-export const ProtectedRoute = ({ 
-  children, 
+export const ProtectedRoute = ({
+  children,
   requiredRole,
-  redirectTo = '/login' 
+  redirectTo = '/login'
 }: ProtectedRouteProps) => {
-  const { isAuthenticated, user } = useAuthStore();
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const hasHydrated = useAuthStore((state) => state.hasHydrated);
+  const user = useAuthStore((state) => state.user);
   const location = useLocation();
-  const [isHydrated, setIsHydrated] = useState(false);
 
-  useEffect(() => {
-    setIsHydrated(true);
-  }, []);
-
-  // Debug logging
-  useEffect(() => {
-    console.log('[ProtectedRoute] Render:', {
-      path: location.pathname,
-      isHydrated,
-      isAuthenticated,
-      userRole: user?.role,
-      requiredRole,
-      isAdmin: user?.role?.slug === USER_ROLES.ADMIN,
-    });
-  }, [isHydrated, isAuthenticated, user, location.pathname, requiredRole]);
-
-  // Wait for hydration
-  if (!isHydrated) {
-    console.log('[ProtectedRoute] Waiting for hydration...');
-    return null;
+  // Wait for store hydration
+  if (!hasHydrated) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-white">
+        <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
   }
 
   // Not logged in
   if (!isAuthenticated) {
-    console.log('[ProtectedRoute] Not authenticated, redirecting to:', redirectTo);
     return <Navigate to={redirectTo} state={{ from: location }} replace />;
   }
 
@@ -51,16 +38,9 @@ export const ProtectedRoute = ({
 
   // Admin route - only admin allowed
   if (requiredRole === 'ADMIN' && !isAdmin) {
-    console.log('[ProtectedRoute] Not admin, redirecting to /');
     return <Navigate to="/" replace />;
   }
 
-  // User route - any authenticated user
-  if (requiredRole === 'USER' && !user) {
-    return <Navigate to={redirectTo} state={{ from: location }} replace />;
-  }
-
-  console.log('[ProtectedRoute] Access granted');
   return <>{children}</>;
 };
 
@@ -77,10 +57,12 @@ export const withAuth = (Component: React.ComponentType, requiredRole?: 'USER' |
     if (!isHydrated) {
       return null;
     }
-    
+
     if (!isAuthenticated) {
       return <Navigate to="/login" replace />;
     }
+
+    const isAdmin = user?.role?.slug === USER_ROLES.ADMIN;
 
     if (requiredRole === 'ADMIN' && !isAdmin) {
       return <Navigate to="/" replace />;

@@ -3,6 +3,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui';
+import { useActiveBanners } from '@/hooks/useBanners';
+import { getImageUrl } from '@/utils';
 
 interface Slide {
   id: number;
@@ -13,22 +15,18 @@ interface Slide {
   buttonLink: string;
 }
 
-interface HeroSliderProps {
-  slides?: Slide[];
-}
-
 const defaultSlides: Slide[] = [
   {
     id: 1,
-    image: 'https://images.unsplash.com/photo-1593642632559-0c6d3fc62b89?w=1200&h=400&fit=crop',
-    title: 'iPhone 15 Pro Max',
-    subtitle: 'Siêu phẩm công nghệ mới nhất từ Apple',
+    image: 'https://images.unsplash.com/photo-1592750475338-74b7b21085ab?w=1200&h=500&fit=crop',
+    title: 'iPhone 16 Pro Max',
+    subtitle: 'Siêu phẩm công nghệ đỉnh cao',
     buttonText: 'Mua ngay',
     buttonLink: '/products',
   },
   {
     id: 2,
-    image: 'https://images.unsplash.com/photo-1593642632559-0c6d3fc62b89?w=1200&h=400&fit=crop',
+    image: 'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=1200&h=500&fit=crop',
     title: 'MacBook Pro M3',
     subtitle: 'Hiệu năng vượt trội với chip M3',
     buttonText: 'Khám phá',
@@ -36,7 +34,7 @@ const defaultSlides: Slide[] = [
   },
   {
     id: 3,
-    image: 'https://images.unsplash.com/photo-1593642632559-0c6d3fc62b89?w=1200&h=400&fit=crop',
+    image: 'https://images.unsplash.com/photo-1610945415295-d9bbf067e59c?w=1200&h=500&fit=crop',
     title: 'Samsung Galaxy S24',
     subtitle: 'Trí tuệ nhân tạo trong tầm tay',
     buttonText: 'Xem ngay',
@@ -44,20 +42,52 @@ const defaultSlides: Slide[] = [
   },
 ];
 
-export const HeroSlider = ({ slides = defaultSlides }: HeroSliderProps) => {
+const getLinkUrl = (linkType?: string, link?: string) => {
+  if (!linkType || linkType === 'NONE' || !link) return '/products';
+  
+  switch (linkType) {
+    case 'PRODUCT':
+      return `/products/${link}`;
+    case 'CATEGORY':
+      return `/products?categoryId=${link}`;
+    case 'BRAND':
+      return `/products?brandId=${link}`;
+    case 'URL':
+    default:
+      return link || '/products';
+  }
+};
+
+export const HeroSlider = () => {
+  const { data: banners } = useActiveBanners();
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isAutoPlay, setIsAutoPlay] = useState(true);
+  const [imgError, setImgError] = useState(false);
+
+  const slides: Slide[] = banners && banners.length > 0
+    ? banners.map((banner) => ({
+        id: banner.id,
+        image: getImageUrl(banner.imageUrl),
+        title: banner.title,
+        subtitle: banner.subtitle || '',
+        buttonText: 'Xem ngay',
+        buttonLink: getLinkUrl(banner.linkType, banner.link),
+      }))
+    : defaultSlides;
 
   const nextSlide = useCallback(() => {
     setCurrentSlide((prev) => (prev + 1) % slides.length);
+    setImgError(false);
   }, [slides.length]);
 
   const prevSlide = useCallback(() => {
     setCurrentSlide((prev) => (prev - 1 + slides.length) % slides.length);
+    setImgError(false);
   }, [slides.length]);
 
   const goToSlide = (index: number) => {
     setCurrentSlide(index);
+    setImgError(false);
   };
 
   useEffect(() => {
@@ -66,6 +96,14 @@ export const HeroSlider = ({ slides = defaultSlides }: HeroSliderProps) => {
     const timer = setInterval(nextSlide, 5000);
     return () => clearInterval(timer);
   }, [isAutoPlay, nextSlide]);
+
+  useEffect(() => {
+    setImgError(false);
+  }, [currentSlide]);
+
+  const currentImage = imgError 
+    ? 'https://images.unsplash.com/photo-1593642632559-0c6d3fc62b89?w=1200&h=400&fit=crop' 
+    : slides[currentSlide]?.image;
 
   return (
     <div 
@@ -84,9 +122,10 @@ export const HeroSlider = ({ slides = defaultSlides }: HeroSliderProps) => {
           className="absolute inset-0"
         >
           <img
-            src={slides[currentSlide].image}
-            alt={slides[currentSlide].title}
+            src={currentImage}
+            alt={slides[currentSlide]?.title}
             className="w-full h-full object-cover"
+            onError={() => setImgError(true)}
           />
           {/* Overlay */}
           <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/40 to-transparent" />
@@ -101,14 +140,14 @@ export const HeroSlider = ({ slides = defaultSlides }: HeroSliderProps) => {
                 className="max-w-lg"
               >
                 <h1 className="text-2xl md:text-4xl lg:text-5xl font-bold text-white mb-3 md:mb-4">
-                  {slides[currentSlide].title}
+                  {slides[currentSlide]?.title}
                 </h1>
                 <p className="text-base md:text-lg lg:text-xl text-white/90 mb-4 md:mb-6">
-                  {slides[currentSlide].subtitle}
+                  {slides[currentSlide]?.subtitle}
                 </p>
-                <Link to={slides[currentSlide].buttonLink}>
+                <Link to={slides[currentSlide]?.buttonLink}>
                   <Button size="lg" className="bg-primary hover:bg-primary-700 text-white">
-                    {slides[currentSlide].buttonText}
+                    {slides[currentSlide]?.buttonText}
                   </Button>
                 </Link>
               </motion.div>
@@ -118,33 +157,37 @@ export const HeroSlider = ({ slides = defaultSlides }: HeroSliderProps) => {
       </AnimatePresence>
 
       {/* Navigation Arrows */}
-      <button
-        onClick={prevSlide}
-        className="absolute left-2 md:left-4 top-1/2 -translate-y-1/2 w-10 h-10 md:w-12 md:h-12 bg-white/20 hover:bg-white/40 backdrop-blur-sm rounded-full flex items-center justify-center text-white transition-all"
-      >
-        <ChevronLeft className="w-5 h-5 md:w-6 md:h-6" />
-      </button>
-      <button
-        onClick={nextSlide}
-        className="absolute right-2 md:right-4 top-1/2 -translate-y-1/2 w-10 h-10 md:w-12 md:h-12 bg-white/20 hover:bg-white/40 backdrop-blur-sm rounded-full flex items-center justify-center text-white transition-all"
-      >
-        <ChevronRight className="w-5 h-5 md:w-6 md:h-6" />
-      </button>
-
-      {/* Indicators */}
-      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
-        {slides.map((_, index) => (
+      {slides.length > 1 && (
+        <>
           <button
-            key={index}
-            onClick={() => goToSlide(index)}
-            className={`w-2 h-2 md:w-3 md:h-3 rounded-full transition-all ${
-              index === currentSlide
-                ? 'bg-primary w-6 md:w-8'
-                : 'bg-white/50 hover:bg-white'
-            }`}
-          />
-        ))}
-      </div>
+            onClick={prevSlide}
+            className="absolute left-2 md:left-4 top-1/2 -translate-y-1/2 w-10 h-10 md:w-12 md:h-12 bg-white/20 hover:bg-white/40 backdrop-blur-sm rounded-full flex items-center justify-center text-white transition-all"
+          >
+            <ChevronLeft className="w-5 h-5 md:w-6 md:h-6" />
+          </button>
+          <button
+            onClick={nextSlide}
+            className="absolute right-2 md:right-4 top-1/2 -translate-y-1/2 w-10 h-10 md:w-12 md:h-12 bg-white/20 hover:bg-white/40 backdrop-blur-sm rounded-full flex items-center justify-center text-white transition-all"
+          >
+            <ChevronRight className="w-5 h-5 md:w-6 md:h-6" />
+          </button>
+
+          {/* Indicators */}
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
+            {slides.map((_, index) => (
+              <button
+                key={index}
+                onClick={() => goToSlide(index)}
+                className={`w-2 h-2 md:w-3 md:h-3 rounded-full transition-all ${
+                  index === currentSlide
+                    ? 'bg-primary w-6 md:w-8'
+                    : 'bg-white/50 hover:bg-white'
+                }`}
+              />
+            ))}
+          </div>
+        </>
+      )}
     </div>
   );
 };

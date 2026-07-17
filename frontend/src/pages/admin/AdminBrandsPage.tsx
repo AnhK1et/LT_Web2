@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { AdminTable, Modal, ConfirmDialog } from '@/components/admin';
 import { Button, Input } from '@/components/ui';
+import { getImageUrl } from '@/utils';
 import {
   useAdminBrands,
   useCreateBrand,
@@ -39,7 +40,6 @@ export default function AdminBrandsPage() {
     register,
     handleSubmit,
     reset,
-    setValue,
     formState: { errors },
   } = useForm<BrandFormData>({
     defaultValues: defaultFormValues,
@@ -69,12 +69,17 @@ export default function AdminBrandsPage() {
 
   const onSubmit = async (data: BrandFormData) => {
     try {
+      // Create FormData for file upload
       const formData = new FormData();
       formData.append('name', data.name);
       formData.append('slug', data.slug);
-      if (data.description) formData.append('description', data.description);
-      formData.append('active', data.active);
-      if (data.logo?.[0]) formData.append('logo', data.logo[0]);
+      formData.append('description', data.description);
+      formData.append('active', data.active === 'true' ? 'true' : 'false');
+      
+      // Handle logo file
+      if (data.logo && data.logo.length > 0) {
+        formData.append('logo', data.logo[0]);
+      }
 
       if (selectedBrand) {
         await updateMutation.mutateAsync({ id: selectedBrand.id, data: formData });
@@ -103,7 +108,7 @@ export default function AdminBrandsPage() {
       render: (item: Brand) => (
         item.logo ? (
           <img
-            src={item.logo}
+            src={getImageUrl(item.logo)}
             alt={item.name}
             className="w-12 h-12 rounded-lg object-contain bg-white border"
           />

@@ -49,7 +49,7 @@ const menuItems = [
 
 export const AdminSidebar = () => {
   const location = useLocation();
-  const { isSidebarOpen } = useUIStore();
+  const isSidebarOpen = useUIStore((state) => state.isSidebarOpen);
 
   return (
     <aside

@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import { Minus, Plus, Trash2 } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { formatCurrency, calculateDiscount } from '@/utils';
+import { formatCurrency, calculateDiscount, getImageUrl } from '@/utils';
 import { Checkbox } from '@/components/ui';
 import type { CartItem as CartItemType } from '@/types';
 
@@ -10,7 +10,7 @@ interface CartItemProps {
   onUpdateQuantity: (itemId: number, quantity: number) => void;
   onRemove: (itemId: number) => void;
   isSelected: boolean;
-  onSelectChange: (itemId: number, selected: boolean) => void;
+  onSelectChange: (itemId: number) => void;
 }
 
 export const CartItem = ({
@@ -56,7 +56,7 @@ export const CartItem = ({
         <div className="flex items-start pt-2">
           <Checkbox
             checked={isSelected}
-            onChange={(e) => onSelectChange(item.id, e.target.checked)}
+            onChange={() => onSelectChange(item.id)}
           />
         </div>
 
@@ -66,7 +66,7 @@ export const CartItem = ({
           className="w-20 h-20 sm:w-24 sm:h-24 flex-shrink-0 bg-accent-50 rounded-lg overflow-hidden"
         >
           <img
-            src={product.thumbnail || '/placeholder.png'}
+            src={getImageUrl(product.thumbnail)}
             alt={product.name}
             className="w-full h-full object-cover hover:scale-105 transition-transform"
           />
@@ -91,7 +91,7 @@ export const CartItem = ({
           {/* Price */}
           <div className="mt-2 flex items-baseline gap-2">
             <span className="text-lg font-bold text-primary">
-              {formatCurrency(displayPrice!)}
+              {formatCurrency(displayPrice || 0)}
             </span>
             {hasDiscount && (
               <span className="text-sm text-accent-400 line-through">

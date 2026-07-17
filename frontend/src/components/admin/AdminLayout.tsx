@@ -6,6 +6,7 @@ import {
   Package,
   Layers,
   Tag,
+  Image,
   ShoppingCart,
   Users,
   LogOut,
@@ -21,6 +22,7 @@ const menuItems = [
   { path: '/admin/products', icon: Package, label: 'Sản phẩm' },
   { path: '/admin/categories', icon: Layers, label: 'Danh mục' },
   { path: '/admin/brands', icon: Tag, label: 'Thương hiệu' },
+  { path: '/admin/banners', icon: Image, label: 'Banner' },
   { path: '/admin/orders', icon: ShoppingCart, label: 'Đơn hàng' },
   { path: '/admin/users', icon: Users, label: 'Người dùng' },
 ];
@@ -29,7 +31,8 @@ export const AdminLayout = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const location = useLocation();
-  const { user, logout } = useAuthStore();
+  const user = useAuthStore((state) => state.user);
+  const logout = useAuthStore((state) => state.logout);
 
   const handleLogout = () => {
     logout();

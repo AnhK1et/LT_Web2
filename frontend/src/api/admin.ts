@@ -1,20 +1,22 @@
 import api from './axios';
-import type { ApiResponse, PageResponse, Product, Category, Brand, Order, User, DashboardStats } from '@/types';
+import type { ApiResponse, PageResponse, Product, Category, Brand, Order, User, DashboardStats, InventoryLog } from '@/types';
 import type { ProductQueryParams as AdminProductQueryParams } from './endpoints';
 
 export interface CategoryParams {
-  name: string;
-  slug: string;
+  name?: string;
+  slug?: string;
   description?: string;
   image?: string;
   parentId?: number;
+  active?: boolean;
 }
 
 export interface BrandParams {
-  name: string;
-  slug: string;
+  name?: string;
+  slug?: string;
   description?: string;
   logo?: string;
+  active?: boolean;
 }
 
 export type { ProductQueryParams as AdminProductQueryParams } from './endpoints';
@@ -64,15 +66,11 @@ export const adminApi = {
   getCategory: (id: number) =>
     api.get<ApiResponse<Category>>(`/admin/categories/${id}`),
 
-  createCategory: (data: FormData) =>
-    api.post<ApiResponse<Category>>('/admin/categories', data, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    }),
+  createCategory: (data: CategoryParams) =>
+    api.post<ApiResponse<Category>>('/admin/categories', data),
 
-  updateCategory: (id: number, data: FormData) =>
-    api.put<ApiResponse<Category>>(`/admin/categories/${id}`, data, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    }),
+  updateCategory: (id: number, data: CategoryParams) =>
+    api.put<ApiResponse<Category>>(`/admin/categories/${id}`, data),
 
   deleteCategory: (id: number) =>
     api.delete<ApiResponse<void>>(`/admin/categories/${id}`),
@@ -132,4 +130,17 @@ export const adminApi = {
 
   getLowStock: (threshold = 10, limit = 20) =>
     api.get('/admin/dashboard/low-stock', { params: { threshold, limit } }),
+
+  // Inventory
+  adjustProductStock: (productId: number, data: { quantity: number; changeType: string; note?: string }) =>
+    api.post<ApiResponse<void>>(`/admin/inventory/product/${productId}/adjust`, null, { params: data }),
+
+  adjustVariantStock: (variantId: number, data: { quantity: number; changeType: string; note?: string }) =>
+    api.post<ApiResponse<void>>(`/admin/inventory/variant/${variantId}/adjust`, null, { params: data }),
+
+  getProductInventoryLogs: (productId: number, params?: { page?: number; size?: number }) =>
+    api.get<ApiResponse<PageResponse<InventoryLog>>>(`/admin/inventory/product/${productId}/logs`, { params }),
+
+  getVariantInventoryLogs: (variantId: number, params?: { page?: number; size?: number }) =>
+    api.get<ApiResponse<PageResponse<InventoryLog>>>(`/admin/inventory/variant/${variantId}/logs`, { params }),
 };

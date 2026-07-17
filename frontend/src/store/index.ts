@@ -6,8 +6,10 @@ import { STORAGE_KEYS, USER_ROLES } from '@/constants';
 interface AuthState {
   user: User | null;
   isAuthenticated: boolean;
+  hasHydrated: boolean;
   setUser: (user: User | null) => void;
   logout: () => void;
+  setHasHydrated: (state: boolean) => void;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -15,9 +17,9 @@ export const useAuthStore = create<AuthState>()(
     (set) => ({
       user: null,
       isAuthenticated: false,
+      hasHydrated: false,
       
       setUser: (user) => {
-        console.log('[AuthStore] setUser called:', { user });
         set({ 
           user, 
           isAuthenticated: !!user,
@@ -28,12 +30,13 @@ export const useAuthStore = create<AuthState>()(
         localStorage.removeItem(STORAGE_KEYS.ACCESS_TOKEN);
         localStorage.removeItem(STORAGE_KEYS.REFRESH_TOKEN);
         localStorage.removeItem(STORAGE_KEYS.USER);
-        console.log('[AuthStore] Logged out');
         set({ 
           user: null, 
           isAuthenticated: false,
         });
       },
+      
+      setHasHydrated: (state) => set({ hasHydrated: state }),
     }),
     {
       name: 'akstore-auth',
@@ -42,7 +45,7 @@ export const useAuthStore = create<AuthState>()(
         isAuthenticated: state.isAuthenticated,
       }),
       onRehydrateStorage: () => (state) => {
-        console.log('[AuthStore] Rehydrated:', state);
+        state?.setHasHydrated(true);
       },
     }
   )

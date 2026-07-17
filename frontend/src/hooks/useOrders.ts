@@ -4,11 +4,10 @@ import { orderApi } from '@/api';
 import { useAuthStore } from '@/store';
 import Swal from 'sweetalert2';
 import type { Order } from '@/types';
-import type { OrderQueryParams } from '@/api';
 
-export const useOrders = (params?: OrderQueryParams) => {
+export const useOrders = (params?: { status?: string; page?: number; size?: number }) => {
   const queryClient = useQueryClient();
-  const { isAuthenticated } = useAuthStore();
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const [statusFilter, setStatusFilter] = useState<string | undefined>(params?.status);
 
   // Fetch orders
@@ -18,7 +17,7 @@ export const useOrders = (params?: OrderQueryParams) => {
     error,
     refetch,
   } = useQuery({
-    queryKey: ['orders', params],
+    queryKey: ['orders', params?.page ?? 0, params?.size ?? 10, params?.status],
     queryFn: async () => {
       const response = await orderApi.getUserOrders(params);
       return response.data;
@@ -107,7 +106,7 @@ export const useOrders = (params?: OrderQueryParams) => {
 // Hook for single order detail
 export const useOrderDetail = (orderId: number | undefined) => {
   const queryClient = useQueryClient();
-  const { isAuthenticated } = useAuthStore();
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
 
   const {
     data: orderData,
@@ -115,7 +114,7 @@ export const useOrderDetail = (orderId: number | undefined) => {
     error,
     refetch,
   } = useQuery({
-    queryKey: ['order', orderId],
+    queryKey: ['order', orderId] as const,
     queryFn: async () => {
       const response = await orderApi.getUserOrderById(orderId!);
       return response.data;

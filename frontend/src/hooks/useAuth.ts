@@ -1,15 +1,20 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { authApi } from '@/api';
+import { oauthApi } from '@/api/oauth';
 import { useAuthStore } from '@/store';
 import { STORAGE_KEYS, USER_ROLES } from '@/constants';
-import type { LoginRequest, RegisterRequest, AuthResponse } from '@/api/auth';
+import type { LoginRequest, RegisterRequest } from '@/api/auth';
 import Swal from 'sweetalert2';
 
 export const useAuth = () => {
   const navigate = useNavigate();
-  const { user, isAuthenticated, isAdmin, setUser, logout: storeLogout } = useAuthStore();
+  const user = useAuthStore((state) => state.user);
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const setUser = useAuthStore((state) => state.setUser);
+  const logout = useAuthStore((state) => state.logout);
+  const isAdmin = user?.role?.slug === USER_ROLES.ADMIN;
   const [isLoading, setIsLoading] = useState(false);
 
   const loginMutation = useMutation({
@@ -18,18 +23,12 @@ export const useAuth = () => {
         email: data.email.trim(),
         password: data.password,
       };
-      console.log('[useAuth] login payload:', payload);
       const response = await authApi.login(payload);
-      console.log('[useAuth] login raw response:', response);
-      console.log('[useAuth] login response.data:', response.data);
       return response.data;
     },
     onSuccess: (response) => {
-      console.log('[useAuth] login onSuccess response:', response);
-
       const data = response?.data;
       if (!data?.accessToken || !data?.user) {
-        console.error('[useAuth] Invalid login payload:', data);
         Swal.fire({
           icon: 'error',
           title: 'Đăng nhập thất bại',
@@ -51,9 +50,12 @@ export const useAuth = () => {
         status: userData.status,
         createdAt: userData.createdAt,
         role: {
-          id: userData.role?.id || 0,
-          name: userData.role?.name || userData.role || 'USER',
-          slug: userData.role?.slug || userData.roleSlug || 'user',
+          id: typeof userData.role === 'object' ? (userData.role?.id || 0) : 0,
+          name: typeof userData.role === 'string' ? userData.role : (userData.role?.name || 'USER'),
+          slug:
+            typeof userData.role === 'object'
+              ? (userData.role?.slug || 'user')
+              : (userData.roleSlug || String(userData.role || 'user')),
         },
       };
 
@@ -64,7 +66,7 @@ export const useAuth = () => {
       }
       localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(transformedUser));
 
-      // Update store - this will persist automatically
+      // Update store
       setUser(transformedUser);
 
       // Show success message
@@ -81,14 +83,12 @@ export const useAuth = () => {
       // Navigate based on role
       const isAdminUser = transformedUser.role.slug === USER_ROLES.ADMIN;
       if (isAdminUser) {
-        window.location.href = '/admin';
+        navigate('/admin', { replace: true });
       } else {
         navigate('/');
       }
     },
     onError: (error: unknown) => {
-      console.error('[useAuth] login error:', error);
-
       const err = error as { response?: { data?: { message?: string } } };
       Swal.fire({
         icon: 'error',
@@ -101,16 +101,11 @@ export const useAuth = () => {
   const registerMutation = useMutation({
     mutationFn: async (data: RegisterRequest) => {
       const response = await authApi.register(data);
-      console.log('[useAuth] register raw response:', response);
-      console.log('[useAuth] register response.data:', response.data);
       return response.data;
     },
     onSuccess: (response) => {
-      console.log('[useAuth] register onSuccess response:', response);
-
       const data = response?.data;
       if (!data?.accessToken || !data?.user) {
-        console.error('[useAuth] Invalid register payload:', data);
         Swal.fire({
           icon: 'error',
           title: 'Đăng ký thất bại',
@@ -132,9 +127,12 @@ export const useAuth = () => {
         status: userData.status,
         createdAt: userData.createdAt,
         role: {
-          id: userData.role?.id || 0,
-          name: userData.role?.name || userData.role || 'USER',
-          slug: userData.role?.slug || userData.roleSlug || 'user',
+          id: typeof userData.role === 'object' ? (userData.role?.id || 0) : 0,
+          name: typeof userData.role === 'string' ? userData.role : (userData.role?.name || 'USER'),
+          slug:
+            typeof userData.role === 'object'
+              ? (userData.role?.slug || 'user')
+              : (userData.roleSlug || String(userData.role || 'user')),
         },
       };
 
@@ -160,8 +158,6 @@ export const useAuth = () => {
       });
     },
     onError: (error: unknown) => {
-      console.error('[useAuth] register error:', error);
-
       const err = error as { response?: { data?: { message?: string } } };
       Swal.fire({
         icon: 'error',
@@ -189,7 +185,99 @@ export const useAuth = () => {
     }
   };
 
-  const logout = () => {
+  const socialLoginMutation = useMutation({
+    mutationFn: async ({ provider, idToken, accessToken }: { provider: string; idToken?: string; accessToken?: string }) => {
+      if (provider === 'google' && idToken) {
+        const response = await oauthApi.google({ idToken });
+        return response.data;
+      } else if (provider === 'facebook' && accessToken) {
+        const response = await oauthApi.facebook({ accessToken });
+        return response.data;
+      }
+      throw new Error('Invalid provider or missing token');
+    },
+    onSuccess: (response) => {
+      const data = response?.data;
+      if (!data?.accessToken || !data?.user) {
+        Swal.fire({
+          icon: 'error',
+          title: 'Đăng nhập thất bại',
+          text: 'Phản hồi đăng nhập không hợp lệ',
+        });
+        return;
+      }
+
+      const { accessToken, refreshToken, user: userData } = data;
+
+      // Transform user data to match frontend types
+      const transformedUser = {
+        id: userData.id,
+        email: userData.email,
+        name: userData.name,
+        phone: userData.phone,
+        avatar: userData.avatar,
+        address: userData.address,
+        status: userData.status,
+        createdAt: userData.createdAt,
+        role: {
+          id: typeof userData.role === 'object' ? (userData.role?.id || 0) : 0,
+          name: typeof userData.role === 'string' ? userData.role : (userData.role?.name || 'USER'),
+          slug:
+            typeof userData.role === 'object'
+              ? (userData.role?.slug || 'user')
+              : (userData.roleSlug || String(userData.role || 'user')),
+        },
+      };
+
+      // Save to localStorage
+      localStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, accessToken);
+      if (refreshToken) {
+        localStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, refreshToken);
+      }
+      localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(transformedUser));
+
+      // Update store
+      setUser(transformedUser);
+
+      // Show success message
+      Swal.fire({
+        icon: 'success',
+        title: 'Đăng nhập thành công!',
+        text: `Chào mừng ${userData.name}!`,
+        timer: 2000,
+        showConfirmButton: false,
+        toast: true,
+        position: 'top-end',
+      });
+
+      // Navigate based on role
+      const isAdminUser = transformedUser.role.slug === USER_ROLES.ADMIN;
+      if (isAdminUser) {
+        navigate('/admin', { replace: true });
+      } else {
+        navigate('/');
+      }
+    },
+    onError: (error: unknown) => {
+      const err = error as { response?: { data?: { message?: string } }; message?: string };
+      Swal.fire({
+        icon: 'error',
+        title: 'Đăng nhập thất bại',
+        text: err.response?.data?.message || err.message || 'Không thể đăng nhập với mạng xã hội',
+      });
+    },
+  });
+
+  const socialLogin = async (provider: string, idToken?: string, accessToken?: string) => {
+    setIsLoading(true);
+    try {
+      await socialLoginMutation.mutateAsync({ provider, idToken, accessToken });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleLogout = useCallback(() => {
     Swal.fire({
       title: 'Đăng xuất',
       text: 'Bạn có chắc muốn đăng xuất?',
@@ -205,9 +293,9 @@ export const useAuth = () => {
         localStorage.removeItem(STORAGE_KEYS.ACCESS_TOKEN);
         localStorage.removeItem(STORAGE_KEYS.REFRESH_TOKEN);
         localStorage.removeItem(STORAGE_KEYS.USER);
-        
+
         // Clear store
-        storeLogout();
+        logout();
 
         Swal.fire({
           icon: 'success',
@@ -222,32 +310,16 @@ export const useAuth = () => {
         navigate('/');
       }
     });
-  };
-
-  const checkAuth = () => {
-    const token = localStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN);
-    const userStr = localStorage.getItem(STORAGE_KEYS.USER);
-    
-    if (token && userStr) {
-      try {
-        const userData = JSON.parse(userStr);
-        setUser(userData);
-        return true;
-      } catch {
-        return false;
-      }
-    }
-    return false;
-  };
+  }, [logout, navigate]);
 
   return {
     user,
     isAuthenticated,
     isAdmin,
-    isLoading: isLoading || loginMutation.isPending || registerMutation.isPending,
+    isLoading: isLoading || loginMutation.isPending || registerMutation.isPending || socialLoginMutation.isPending,
     login,
     register,
-    logout,
-    checkAuth,
+    socialLogin,
+    logout: handleLogout,
   };
 };

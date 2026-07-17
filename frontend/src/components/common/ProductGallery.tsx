@@ -11,9 +11,20 @@ export const ProductGallery = ({ images, productName }: ProductGalleryProps) => 
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isZoomed, setIsZoomed] = useState(false);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
+  const [imgErrors, setImgErrors] = useState<Set<number>>(new Set());
 
-  const allImages = images.length > 0 ? images : ['/placeholder.png'];
+  const getInitials = (name: string) => {
+    const words = name.split(' ').slice(0, 2);
+    return words.map(w => w[0]).join('').toUpperCase();
+  };
+
+  const handleImgError = (index: number) => {
+    setImgErrors(prev => new Set([...prev, index]));
+  };
+
+  const allImages = images.length > 0 ? images : ['/placeholder.svg'];
   const currentImage = allImages[currentIndex];
+  const isCurrentError = imgErrors.has(currentIndex);
 
   const goToNext = () => {
     setCurrentIndex((prev) => (prev + 1) % allImages.length);
@@ -40,24 +51,39 @@ export const ProductGallery = ({ images, productName }: ProductGalleryProps) => 
         onMouseMove={handleMouseMove}
       >
         <AnimatePresence mode="wait">
-          <motion.img
+          <motion.div
             key={currentIndex}
-            src={currentImage}
-            alt={productName}
-            className="w-full h-full object-cover"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
-            style={
-              isZoomed
-                ? {
-                    transformOrigin: `${mousePosition.x}% ${mousePosition.y}%`,
-                    transform: 'scale(2)',
-                  }
-                : undefined
-            }
-          />
+            className="w-full h-full"
+          >
+            {isCurrentError ? (
+              <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-accent-100 to-accent-200">
+                <div className="text-center">
+                  <div className="w-24 h-24 mx-auto mb-3 rounded-2xl bg-accent-300 flex items-center justify-center">
+                    <span className="text-3xl font-bold text-accent-600">{getInitials(productName)}</span>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <img
+                src={currentImage}
+                alt={productName}
+                className="w-full h-full object-cover"
+                style={
+                  isZoomed
+                    ? {
+                        transformOrigin: `${mousePosition.x}% ${mousePosition.y}%`,
+                        transform: 'scale(2)',
+                      }
+                    : undefined
+                }
+                onError={() => handleImgError(currentIndex)}
+              />
+            )}
+          </motion.div>
         </AnimatePresence>
 
         {/* Navigation Arrows */}
@@ -104,11 +130,18 @@ export const ProductGallery = ({ images, productName }: ProductGalleryProps) => 
                   : 'border-transparent hover:border-accent-300'
               }`}
             >
-              <img
-                src={image}
-                alt={`${productName} - ${index + 1}`}
-                className="w-full h-full object-cover"
-              />
+              {imgErrors.has(index) ? (
+                <div className="w-full h-full flex items-center justify-center bg-accent-100">
+                  <span className="text-sm font-bold text-accent-500">{getInitials(productName)}</span>
+                </div>
+              ) : (
+                <img
+                  src={image}
+                  alt={`${productName} - ${index + 1}`}
+                  className="w-full h-full object-cover"
+                  onError={() => handleImgError(index)}
+                />
+              )}
             </button>
           ))}
         </div>

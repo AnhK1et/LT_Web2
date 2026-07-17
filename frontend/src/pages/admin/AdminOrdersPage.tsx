@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { AdminTable, Modal, ConfirmDialog } from '@/components/admin';
 import { Button, Input } from '@/components/ui';
@@ -47,11 +47,13 @@ export default function AdminOrdersPage() {
   const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);
   const [newStatus, setNewStatus] = useState('');
 
-  const { orders, totalPages, totalElements, isLoading, refetch } = useAdminOrders({
+  const queryParams = useMemo(() => ({
     page: page - 1,
     size: 10,
     status: statusFilter,
-  });
+  }), [page, statusFilter]);
+
+  const { orders, totalPages, totalElements, isLoading, refetch } = useAdminOrders(queryParams);
 
   const updateStatusMutation = useUpdateOrderStatus();
 
@@ -126,6 +128,18 @@ export default function AdminOrdersPage() {
         <span className="text-sm text-accent-600">
           {new Date(item.createdAt).toLocaleDateString('vi-VN')}
         </span>
+      ),
+    },
+    {
+      key: 'actions',
+      label: 'Thao tác',
+      render: (item: Order) => (
+        <button
+          onClick={() => openDetailModal(item)}
+          className="px-3 py-1.5 text-sm bg-primary/10 text-primary rounded-lg hover:bg-primary/20 transition-colors"
+        >
+          Chi tiết
+        </button>
       ),
     },
   ];

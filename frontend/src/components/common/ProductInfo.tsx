@@ -4,27 +4,50 @@ import { motion } from 'framer-motion';
 import { ShoppingCart, Zap, Star, Minus, Plus, Check, Shield, Truck, RotateCcw } from 'lucide-react';
 import { Button, Badge } from '@/components/ui';
 import { formatCurrency, calculateDiscount } from '@/utils';
-import type { Product } from '@/types';
+import type { Product, ProductVariant } from '@/types';
 
 interface ProductInfoProps {
   product: Product;
-  onAddToCart: (quantity: number) => void;
-  onBuyNow: (quantity: number) => void;
+  onAddToCart: (quantity: number, variantId?: number) => Promise<void>;
+  onBuyNow: (quantity: number, variantId?: number) => Promise<void>;
 }
 
 export const ProductInfo = ({ product, onAddToCart, onBuyNow }: ProductInfoProps) => {
   const [quantity, setQuantity] = useState(1);
+  const [selectedVariantId, setSelectedVariantId] = useState<ProductVariant['id'] | undefined>(
+    product.variants?.find((v) => v.isDefault)?.id || product.variants?.[0]?.id
+  );
   const [selectedTab, setSelectedTab] = useState<'description' | 'specs'>('description');
-  
-  const hasDiscount = product.salePrice && product.salePrice < product.price;
+  const [isAddingToCart, setIsAddingToCart] = useState(false);
+  const [isBuyingNow, setIsBuyingNow] = useState(false);
+
+  const variants = product.variants || [];
+  const selectedVariant = variants.find((v) => v.id === selectedVariantId) || variants[0];
+
+  const basePrice = product.price;
+  const baseSalePrice = product.salePrice;
+  const variantAdjustment = selectedVariant?.priceAdjustment || 0;
+
+  const currentPrice = baseSalePrice && baseSalePrice < basePrice ? baseSalePrice : basePrice;
+  const displayPrice = currentPrice + (variantAdjustment || 0);
+
+  const hasDiscount = baseSalePrice && baseSalePrice < basePrice;
   const discountPercent = hasDiscount
-    ? calculateDiscount(product.price, product.salePrice!)
+    ? calculateDiscount(basePrice, baseSalePrice!)
     : 0;
-  const displayPrice = hasDiscount ? product.salePrice : product.price;
+
   const rating = product.rating || 4.5;
   const reviewCount = product.reviewCount || 0;
-  const stock = product.stock ?? product.quantity ?? 0;
+
+  // Calculate stock: variant stock > product quantity
+  const stock = selectedVariant?.stock !== undefined
+    ? selectedVariant.stock
+    : (product.quantity !== undefined ? product.quantity : 0);
   const isInStock = stock > 0;
+
+  // Calculate total stock from all variants for display
+  const totalVariantStock = variants.reduce((sum, v) => sum + (v.stock || 0), 0);
+  const totalStock = variants.length > 0 ? totalVariantStock : (product.quantity || 0);
 
   const handleDecrease = () => {
     if (quantity > 1) setQuantity((q) => q - 1);
@@ -32,6 +55,29 @@ export const ProductInfo = ({ product, onAddToCart, onBuyNow }: ProductInfoProps
 
   const handleIncrease = () => {
     if (quantity < stock) setQuantity((q) => q + 1);
+  };
+
+  const handleVariantChange = (variantId: ProductVariant['id']) => {
+    setSelectedVariantId(variantId);
+    setQuantity(1);
+  };
+
+  const handleAddToCartClick = async () => {
+    setIsAddingToCart(true);
+    try {
+      await onAddToCart(quantity, selectedVariantId);
+    } finally {
+      setIsAddingToCart(false);
+    }
+  };
+
+  const handleBuyNowClick = async () => {
+    setIsBuyingNow(true);
+    try {
+      await onBuyNow(quantity, selectedVariantId);
+    } finally {
+      setIsBuyingNow(false);
+    }
   };
 
   return (
@@ -50,11 +96,11 @@ export const ProductInfo = ({ product, onAddToCart, onBuyNow }: ProductInfoProps
             </Badge>
           )}
         </div>
-        
+
         <h1 className="text-2xl md:text-3xl font-bold text-accent-900 mb-3">
           {product.name}
         </h1>
-        
+
         <div className="flex items-center gap-4 text-sm">
           <div className="flex items-center gap-1">
             {Array.from({ length: 5 }).map((_, i) => (
@@ -84,16 +130,99 @@ export const ProductInfo = ({ product, onAddToCart, onBuyNow }: ProductInfoProps
           {hasDiscount && (
             <>
               <span className="text-lg text-accent-400 line-through">
-                {formatCurrency(product.price)}
+                {formatCurrency(product.price + (variantAdjustment || 0))}
               </span>
               <Badge variant="danger">-{discountPercent}%</Badge>
             </>
           )}
+          {!hasDiscount && variantAdjustment ? (
+            <span className="text-sm text-accent-500">
+              +{formatCurrency(variantAdjustment)} cho dung lượng cao
+            </span>
+          ) : null}
         </div>
         <p className="text-sm text-accent-500 mt-1">
           Giá đã bao gồm VAT
         </p>
       </div>
+
+      {/* Variant Selector */}
+      {(product.variants && product.variants.length > 0) && (
+        <div className="space-y-3">
+          <div className="font-medium">Dung lượng:</div>
+          <div className="flex flex-wrap gap-3">
+            {product.variants
+              .filter((v) => !v.deletedAt)
+              .map((variant) => {
+                const isActive = selectedVariantId === variant.id;
+                const variantPrice = (baseSalePrice && baseSalePrice < basePrice ? baseSalePrice : basePrice) + (variant.priceAdjustment || 0);
+                const vStock = variant.stock || 0;
+                return (
+                  <button
+                    key={variant.id}
+                    type="button"
+                    onClick={() => handleVariantChange(variant.id)}
+                    disabled={vStock <= 0}
+                    className={`flex items-center gap-2 rounded-lg border px-4 py-2 text-sm transition-colors ${
+                      isActive
+                        ? 'border-primary bg-primary/5 text-primary'
+                        : vStock <= 0
+                          ? 'border-accent-200 text-accent-400 cursor-not-allowed opacity-60'
+                          : 'border-accent-200 text-accent-700 hover:border-accent-300'
+                    }`}
+                  >
+                    <span>{variant.capacity}</span>
+                    <span className="text-xs text-accent-500">
+                      {formatCurrency(variantPrice)}
+                    </span>
+                    {variant.isDefault && (
+                      <span className="rounded-full bg-accent-100 px-2 py-0.5 text-xs text-accent-600">
+                        Mặc định
+                      </span>
+                    )}
+                    {vStock <= 0 && (
+                      <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs text-red-600">
+                        Hết hàng
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+          </div>
+          {selectedVariant && (
+            <div className="flex items-center gap-2 text-sm text-accent-600">
+              {(selectedVariant.stock || 0) > 0 ? (
+                <>
+                  <div className="w-2 h-2 rounded-full bg-green-500" />
+                  <span>Còn hàng ({selectedVariant.stock} sản phẩm)</span>
+                </>
+              ) : (
+                <>
+                  <div className="w-2 h-2 rounded-full bg-red-500" />
+                  <span>Hết hàng</span>
+                </>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Fallback: Show stock info when no variants */}
+      {(!product.variants || product.variants.length === 0) && (
+        <div className="flex items-center gap-2 text-sm text-accent-600">
+          {(product.quantity || 0) > 0 ? (
+            <>
+              <div className="w-2 h-2 rounded-full bg-green-500" />
+              <span>Còn hàng ({product.quantity} sản phẩm)</span>
+            </>
+          ) : (
+            <>
+              <div className="w-2 h-2 rounded-full bg-red-500" />
+              <span>Hết hàng</span>
+            </>
+          )}
+        </div>
+      )}
 
       {/* Category & Brand */}
       <div className="flex flex-wrap gap-4 text-sm">
@@ -114,21 +243,6 @@ export const ProductInfo = ({ product, onAddToCart, onBuyNow }: ProductInfoProps
             >
               {product.brand.name}
             </Link>
-          </>
-        )}
-      </div>
-
-      {/* Stock */}
-      <div className="flex items-center gap-2">
-        {isInStock ? (
-          <>
-            <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-            <span className="text-green-600 font-medium">Còn hàng ({stock} sản phẩm)</span>
-          </>
-        ) : (
-          <>
-            <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-            <span className="text-red-600 font-medium">Hết hàng</span>
           </>
         )}
       </div>
@@ -166,27 +280,47 @@ export const ProductInfo = ({ product, onAddToCart, onBuyNow }: ProductInfoProps
       )}
 
       {/* Action Buttons */}
-      {isInStock && (
-        <div className="flex flex-col sm:flex-row gap-3">
-          <Button
-            variant="secondary"
-            size="lg"
-            className="flex-1"
-            leftIcon={<ShoppingCart className="w-5 h-5" />}
-            onClick={() => onAddToCart(quantity)}
-          >
-            Thêm vào giỏ hàng
-          </Button>
-          <Button
-            size="lg"
-            className="flex-1"
-            leftIcon={<Zap className="w-5 h-5" />}
-            onClick={() => onBuyNow(quantity)}
-          >
-            Mua ngay
-          </Button>
-        </div>
-      )}
+      <div className="space-y-3">
+        {isInStock ? (
+          <div className="flex flex-col sm:flex-row gap-3">
+            <Button
+              variant="secondary"
+              size="lg"
+              className="flex-1"
+              leftIcon={<ShoppingCart className="w-5 h-5" />}
+              onClick={handleAddToCartClick}
+              isLoading={isAddingToCart}
+            >
+              Thêm vào giỏ hàng
+            </Button>
+            <Button
+              size="lg"
+              className="flex-1"
+              leftIcon={<Zap className="w-5 h-5" />}
+              onClick={handleBuyNowClick}
+              isLoading={isBuyingNow}
+            >
+              Mua ngay
+            </Button>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 text-sm text-red-500 bg-red-50 border border-red-100 rounded-lg px-4 py-3">
+              <div className="w-2 h-2 rounded-full bg-red-500" />
+              <span>Sản phẩm hiện đang hết hàng</span>
+            </div>
+            <Button
+              size="lg"
+              className="w-full"
+              leftIcon={<Zap className="w-5 h-5" />}
+              onClick={handleBuyNowClick}
+              isLoading={isBuyingNow}
+            >
+              Đặt hàng trước
+            </Button>
+          </div>
+        )}
+      </div>
 
       {/* Benefits */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t border-accent-100">

@@ -6,8 +6,11 @@ import { AdminSidebar } from './AdminSidebar';
 import { AdminHeader } from './AdminHeader';
 
 export const AdminLayout = () => {
-  const { isAuthenticated, user } = useAuthStore();
-  const { isSidebarOpen, isMobileMenuOpen, toggleMobileMenu } = useUIStore();
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const user = useAuthStore((state) => state.user);
+  const isSidebarOpen = useUIStore((state) => state.isSidebarOpen);
+  const isMobileMenuOpen = useUIStore((state) => state.isMobileMenuOpen);
+  const toggleMobileMenu = useUIStore((state) => state.toggleMobileMenu);
   const navigate = useNavigate();
 
   const isAdmin = user?.role?.slug === 'admin';
@@ -21,7 +24,11 @@ export const AdminLayout = () => {
   }, [isAuthenticated, isAdmin, navigate]);
 
   if (!isAuthenticated || !isAdmin) {
-    return null;
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-accent-50">
+        <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
   }
 
   return (

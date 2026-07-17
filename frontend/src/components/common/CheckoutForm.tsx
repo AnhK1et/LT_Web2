@@ -21,6 +21,7 @@ export const CheckoutForm = ({ onSubmit, isLoading }: CheckoutFormProps) => {
   const {
     register,
     handleSubmit,
+    watch,
     formState: { errors },
   } = useForm<CheckoutFormData>({
     defaultValues: {
@@ -32,13 +33,14 @@ export const CheckoutForm = ({ onSubmit, isLoading }: CheckoutFormProps) => {
     },
   });
 
+  const selectedPaymentMethod = watch('paymentMethod');
+
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
       <div className="bg-white rounded-xl shadow-card p-6">
         <h2 className="text-lg font-bold text-accent-900 mb-4">Thông tin giao hàng</h2>
         
         <div className="space-y-4">
-          {/* Name */}
           <Input
             label="Họ và tên"
             placeholder="Nhập họ và tên người nhận"
@@ -52,7 +54,6 @@ export const CheckoutForm = ({ onSubmit, isLoading }: CheckoutFormProps) => {
             })}
           />
 
-          {/* Phone */}
           <Input
             label="Số điện thoại"
             type="tel"
@@ -67,7 +68,6 @@ export const CheckoutForm = ({ onSubmit, isLoading }: CheckoutFormProps) => {
             })}
           />
 
-          {/* Address */}
           <div>
             <label className="block text-sm font-medium text-accent-700 mb-1">
               Địa chỉ giao hàng
@@ -93,7 +93,6 @@ export const CheckoutForm = ({ onSubmit, isLoading }: CheckoutFormProps) => {
             )}
           </div>
 
-          {/* Note */}
           <div>
             <label className="block text-sm font-medium text-accent-700 mb-1">
               Ghi chú (tùy chọn)
@@ -108,12 +107,15 @@ export const CheckoutForm = ({ onSubmit, isLoading }: CheckoutFormProps) => {
         </div>
       </div>
 
-      {/* Payment Method */}
       <div className="bg-white rounded-xl shadow-card p-6">
         <h2 className="text-lg font-bold text-accent-900 mb-4">Phương thức thanh toán</h2>
         
         <div className="space-y-3">
-          <label className="flex items-center gap-3 p-4 border-2 border-primary rounded-lg bg-primary-50 cursor-pointer">
+          <label className={`flex items-center gap-3 p-4 border-2 rounded-lg cursor-pointer transition-colors ${
+            selectedPaymentMethod === 'COD' 
+              ? 'border-primary bg-primary-50' 
+              : 'border-accent-200 hover:border-accent-300'
+          }`}>
             <input
               type="radio"
               value="COD"
@@ -126,28 +128,25 @@ export const CheckoutForm = ({ onSubmit, isLoading }: CheckoutFormProps) => {
             </div>
           </label>
 
-          <label className="flex items-center gap-3 p-4 border-2 border-accent-200 rounded-lg cursor-not-allowed opacity-60 relative overflow-hidden">
+          <label className={`flex items-center gap-3 p-4 border-2 rounded-lg cursor-pointer transition-colors ${
+            selectedPaymentMethod === 'VNPAY' 
+              ? 'border-primary bg-primary-50' 
+              : 'border-accent-200 hover:border-accent-300'
+          }`}>
             <input
               type="radio"
               value="VNPAY"
-              disabled
               {...register('paymentMethod')}
               className="w-5 h-5 text-primary focus:ring-primary"
             />
             <div className="flex-1">
-              <div className="flex items-center gap-2">
-                <span className="font-medium text-accent-900">Thanh toán qua VNPay</span>
-                <span className="px-2 py-0.5 bg-accent-200 text-accent-600 text-xs rounded-full">
-                  Sắp ra mắt
-                </span>
-              </div>
-              <p className="text-sm text-accent-400">Tính năng đang được phát triển</p>
+              <span className="font-medium text-accent-900">Thanh toán qua VNPay</span>
+              <p className="text-sm text-accent-500">Thanh toán trực tuyến an toàn qua cổng VNPay</p>
             </div>
           </label>
         </div>
       </div>
 
-      {/* Submit Button */}
       <button
         type="submit"
         disabled={isLoading}
@@ -171,10 +170,10 @@ export const CheckoutForm = ({ onSubmit, isLoading }: CheckoutFormProps) => {
                 d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
               />
             </svg>
-            <span>Đang xử lý...</span>
+            <span>Đang chuyển hướng...</span>
           </>
         ) : (
-          'Đặt hàng'
+          selectedPaymentMethod === 'VNPAY' ? 'Tiến hành thanh toán VNPay' : 'Đặt hàng'
         )}
       </button>
     </form>

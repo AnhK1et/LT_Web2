@@ -44,9 +44,17 @@ export function slugify(str: string): string {
 }
 
 export function getImageUrl(path: string | null | undefined): string {
-  if (!path) return '/placeholder.png';
-  if (path.startsWith('http')) return path;
-  return `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'}${path}`;
+  if (!path) return '/placeholder.svg';
+
+  // Already a full URL
+  if (path.startsWith('http://') || path.startsWith('https://')) return path;
+
+  // Already has leading slash
+  if (path.startsWith('/')) return path;
+
+  // Backend stores paths like "uploads/products/xxx.jpg" without leading slash
+  // Add leading slash so Vite proxy can route it correctly
+  return '/' + path;
 }
 
 export function calculateDiscount(original: number, sale: number): number {

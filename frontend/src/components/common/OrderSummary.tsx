@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { formatCurrency } from '@/utils';
+import { formatCurrency, getImageUrl } from '@/utils';
 import type { CartItem } from '@/types';
 
 interface OrderSummaryProps {
@@ -35,7 +35,7 @@ export const OrderSummary = ({
             <div key={item.id} className="flex gap-3">
               <div className="w-16 h-16 bg-accent-50 rounded-lg overflow-hidden flex-shrink-0">
                 <img
-                  src={product.thumbnail || '/placeholder.png'}
+                  src={getImageUrl(product.thumbnail)}
                   alt={product.name}
                   className="w-full h-full object-cover"
                 />

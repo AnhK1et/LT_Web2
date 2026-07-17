@@ -2,6 +2,7 @@ import { motion } from 'framer-motion';
 import { ProductCard } from './ProductCard';
 import { ProductCardSkeleton } from './ProductCardSkeleton';
 import { EmptyState } from '@/components/ui';
+import { getImageUrl } from '@/utils';
 import type { Product } from '@/types';
 
 interface ProductGridProps {
@@ -71,6 +72,10 @@ export const ProductGrid = ({ products, isLoading, viewMode }: ProductGridProps)
 const ProductListCard = ({ product }: { product: Product }) => {
   const hasDiscount = product.salePrice && product.salePrice < product.price;
   const displayPrice = hasDiscount ? product.salePrice : product.price;
+  const variants = product.variants || [];
+  const variantStock = variants.reduce((sum, v) => sum + (v.stock || 0), 0);
+  const stock = variants.length > 0 ? variantStock : (product.quantity || 0);
+  const isInStock = stock > 0;
 
   return (
     <div className="bg-white rounded-xl shadow-card hover:shadow-card-hover overflow-hidden transition-shadow">
@@ -78,7 +83,7 @@ const ProductListCard = ({ product }: { product: Product }) => {
         {/* Image */}
         <div className="sm:w-48 aspect-square sm:aspect-auto bg-accent-50 flex-shrink-0">
           <img
-            src={product.thumbnail || '/placeholder.png'}
+            src={getImageUrl(product.thumbnail)}
             alt={product.name}
             className="w-full h-full object-cover"
           />
@@ -89,14 +94,14 @@ const ProductListCard = ({ product }: { product: Product }) => {
           <h3 className="font-medium text-accent-900 hover:text-primary transition-colors line-clamp-2">
             {product.name}
           </h3>
-          
+
           <div className="mt-2 flex items-baseline gap-2">
             <span className="text-xl font-bold text-primary">
               {new Intl.NumberFormat('vi-VN', {
                 style: 'currency',
                 currency: 'VND',
                 minimumFractionDigits: 0,
-              }).format(displayPrice!)}
+              }).format(displayPrice || 0)}
             </span>
             {hasDiscount && (
               <span className="text-sm text-accent-400 line-through">
@@ -113,12 +118,22 @@ const ProductListCard = ({ product }: { product: Product }) => {
             {product.shortDescription || product.description?.slice(0, 150)}
           </p>
 
+          <p className={`mt-2 text-sm ${isInStock ? 'text-emerald-600' : 'text-red-500'}`}>
+            {isInStock ? `Còn hàng (${stock})` : 'Hết hàng'}
+          </p>
+
           <div className="mt-4 flex gap-2">
-            <button className="flex-1 py-2 px-4 bg-accent-100 text-accent-700 rounded-lg hover:bg-primary hover:text-white transition-colors font-medium">
+            <button
+              disabled={!isInStock}
+              className="flex-1 py-2 px-4 bg-accent-100 text-accent-700 rounded-lg hover:bg-primary hover:text-white transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+            >
               Thêm vào giỏ
             </button>
-            <button className="flex-1 py-2 px-4 bg-primary text-white rounded-lg hover:bg-primary-700 transition-colors font-medium">
-              Mua ngay
+            <button
+              className="flex-1 py-2 px-4 bg-primary text-white rounded-lg hover:bg-primary-700 transition-colors font-medium disabled:opacity-50"
+              aria-disabled={!isInStock}
+            >
+              {isInStock ? 'Mua ngay' : 'Hết hàng'}
             </button>
           </div>
         </div>

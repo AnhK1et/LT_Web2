@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { AdminTable, Modal, ConfirmDialog } from '@/components/admin';
 import { Button, Input } from '@/components/ui';
+import { getImageUrl } from '@/utils';
 import {
   useAdminCategories,
   useCreateCategory,
@@ -49,7 +50,7 @@ export default function AdminCategoriesPage() {
   const nameValue = watch('name');
 
   // Auto-generate slug from name
-  useState(() => {
+  useEffect(() => {
     if (nameValue && !selectedCategory) {
       const slug = nameValue
         .toLowerCase()
@@ -59,7 +60,7 @@ export default function AdminCategoriesPage() {
         .replace(/^-+|-+$/g, '');
       setValue('slug', slug);
     }
-  });
+  }, [nameValue, selectedCategory, setValue]);
 
   const openCreateModal = () => {
     setSelectedCategory(null);
@@ -85,16 +86,17 @@ export default function AdminCategoriesPage() {
 
   const onSubmit = async (data: CategoryFormData) => {
     try {
-      const formData = new FormData();
-      formData.append('name', data.name);
-      formData.append('slug', data.slug);
-      if (data.description) formData.append('description', data.description);
-      formData.append('active', data.active);
+      const params = {
+        name: data.name,
+        slug: data.slug,
+        description: data.description,
+        active: data.active === 'true',
+      };
 
       if (selectedCategory) {
-        await updateMutation.mutateAsync({ id: selectedCategory.id, data: formData });
+        await updateMutation.mutateAsync({ id: selectedCategory.id, data: params });
       } else {
-        await createMutation.mutateAsync(formData);
+        await createMutation.mutateAsync(params);
       }
       setIsModalOpen(false);
       reset();
@@ -118,7 +120,7 @@ export default function AdminCategoriesPage() {
       render: (item: Category) => (
         item.image ? (
           <img
-            src={item.image}
+            src={getImageUrl(item.image)}
             alt={item.name}
             className="w-12 h-12 rounded-lg object-cover bg-accent-50"
           />

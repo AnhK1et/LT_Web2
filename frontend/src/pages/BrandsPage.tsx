@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { Tag } from 'lucide-react';
 import { useActiveBrands } from '@/hooks/useProducts';
 import { Skeleton } from '@/components/ui';
+import { getImageUrl } from '@/utils';
 
 export default function BrandsPage() {
   const navigate = useNavigate();
@@ -43,7 +44,7 @@ export default function BrandsPage() {
               >
                 <div className="w-16 h-16 bg-accent-50 rounded-xl flex items-center justify-center mx-auto mb-4 overflow-hidden">
                   {brand.logo ? (
-                    <img src={brand.logo} alt={brand.name} className="w-full h-full object-contain" />
+                    <img src={getImageUrl(brand.logo)} alt={brand.name} className="w-full h-full object-contain" />
                   ) : (
                     <span className="text-3xl font-bold text-accent-300">{brand.name.charAt(0)}</span>
                   )}

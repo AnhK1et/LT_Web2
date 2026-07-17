@@ -5,8 +5,10 @@ import { useAuthStore, useUIStore } from '@/store';
 
 export const AdminHeader = () => {
   const navigate = useNavigate();
-  const { user, logout } = useAuthStore();
-  const { toggleSidebar, toggleMobileMenu, isSidebarOpen } = useUIStore();
+  const user = useAuthStore((state) => state.user);
+  const logout = useAuthStore((state) => state.logout);
+  const toggleSidebar = useUIStore((state) => state.toggleSidebar);
+  const toggleMobileMenu = useUIStore((state) => state.toggleMobileMenu);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const profileRef = useRef<HTMLDivElement>(null);
 

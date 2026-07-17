@@ -27,7 +27,6 @@ export const ProductFilter = ({ filters, onFilterChange, onClear }: ProductFilte
   const { data: categoriesData } = useCategories();
   const { data: brandsData } = useBrands();
   
-  // Ensure categories and brands are always arrays
   const categories = Array.isArray(categoriesData) ? categoriesData : [];
   const brands = Array.isArray(brandsData) ? brandsData : [];
 
@@ -227,7 +226,7 @@ export const ProductFilter = ({ filters, onFilterChange, onClear }: ProductFilte
           {/* Apply Button (Mobile) */}
           <div className="lg:hidden mt-4">
             <Button className="w-full" onClick={() => setIsMobileOpen(false)}>
-              Áp dụng ({categories.length + brands.length} bộ lọc)
+              Áp dụng
             </Button>
           </div>
         </div>

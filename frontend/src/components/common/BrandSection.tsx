@@ -1,7 +1,31 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useActiveBrands } from '@/hooks/useProducts';
 import { Skeleton } from '@/components/ui';
+import { getImageUrl } from '@/utils';
+
+const BrandLogo = ({ brand }: { brand: { name: string; logo?: string } }) => {
+  const [hasError, setHasError] = useState(false);
+  const logoUrl = getImageUrl(brand.logo);
+
+  if (!brand.logo || hasError) {
+    return (
+      <span className="text-3xl font-bold text-accent-300 group-hover:text-white transition-colors">
+        {brand.name.charAt(0)}
+      </span>
+    );
+  }
+
+  return (
+    <img
+      src={logoUrl}
+      alt={brand.name}
+      onError={() => setHasError(true)}
+      className="max-h-full max-w-full object-contain group-hover:brightness-0 group-hover:invert transition-all"
+    />
+  );
+};
 
 export const BrandSection = () => {
   const { data: brands, isLoading } = useActiveBrands();
@@ -52,17 +76,7 @@ export const BrandSection = () => {
                 className="group block bg-accent-50 rounded-xl p-4 hover:bg-primary transition-colors duration-300"
               >
                 <div className="aspect-video flex items-center justify-center mb-2">
-                  {brand.logo ? (
-                    <img
-                      src={brand.logo}
-                      alt={brand.name}
-                      className="max-h-full max-w-full object-contain group-hover:brightness-0 group-hover:invert transition-all"
-                    />
-                  ) : (
-                    <span className="text-3xl font-bold text-accent-300 group-hover:text-white transition-colors">
-                      {brand.name.charAt(0)}
-                    </span>
-                  )}
+                  <BrandLogo brand={brand} />
                 </div>
                 <h3 className="text-center font-medium text-sm text-accent-700 group-hover:text-white transition-colors truncate">
                   {brand.name}

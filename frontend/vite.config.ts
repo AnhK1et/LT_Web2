@@ -4,26 +4,35 @@ import path from 'path';
 
 export default defineConfig({
   plugins: [
-    react({
-      babel: {
-        parserOpts: {
-          plugins: ['jsx', 'typescript'],
-        },
-      },
-    }),
+    react(),
   ],
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
     },
   },
-  server: {
-    port: 3000,
-    proxy: {
-      '/api': {
-        target: 'http://localhost:8080',
-        changeOrigin: true,
-      },
+    server: {
+        port: 3000,
+        proxy: {
+            '/api': {
+                target: 'http://localhost:8080',
+                changeOrigin: true,
+            },
+            '/uploads': {
+                target: 'http://localhost:8080',
+                changeOrigin: true,
+                rewrite: (path) => path.replace(/^\/uploads/, '/api/uploads'),
+            },
+            '/images': {
+                target: 'http://localhost:8080',
+                changeOrigin: true,
+                rewrite: (path) => path.replace(/^\/images/, '/api/images'),
+            },
+            '/brands': {
+                target: 'http://localhost:8080',
+                changeOrigin: true,
+                rewrite: (path) => path.replace(/^\/brands/, '/api/uploads/brands'),
+            },
+        },
     },
-  },
 });

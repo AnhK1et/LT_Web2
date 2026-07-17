@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
+import { useNavigate } from 'react-router-dom';
 import { AdminTable, Modal, ConfirmDialog } from '@/components/admin';
 import { Button, Input } from '@/components/ui';
 import {
@@ -11,7 +12,9 @@ import {
   useDeleteProduct,
 } from '@/hooks/useAdmin';
 import { formatCurrency } from '@/utils';
+import { getImageUrl } from '@/utils';
 import type { Product } from '@/types';
+import { FileText } from 'lucide-react';
 
 interface ProductFormData {
   name: string;
@@ -42,6 +45,7 @@ const defaultFormValues: ProductFormData = {
 };
 
 export default function AdminProductsPage() {
+  const navigate = useNavigate();
   const [page, setPage] = useState(1);
   const [searchKeyword, setSearchKeyword] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<number | undefined>();
@@ -50,13 +54,15 @@ export default function AdminProductsPage() {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
 
-  const { products, totalPages, totalElements, isLoading, refetch } = useAdminProducts({
+  const queryParams = useMemo(() => ({
     page: page - 1,
     size: 10,
     keyword: searchKeyword,
     categoryId: categoryFilter,
     brandId: brandFilter,
-  });
+  }), [page, searchKeyword, categoryFilter, brandFilter]);
+
+  const { products, totalPages, totalElements, isLoading, refetch } = useAdminProducts(queryParams);
 
   const { categories } = useAdminCategories();
   const { brands } = useAdminBrands();
@@ -151,7 +157,7 @@ export default function AdminProductsPage() {
       label: 'Ảnh',
       render: (item: Product) => (
         <img
-          src={item.thumbnail || '/placeholder.png'}
+          src={getImageUrl(item.thumbnail)}
           alt={item.name}
           className="w-12 h-12 rounded-lg object-cover bg-accent-50"
         />
@@ -194,9 +200,21 @@ export default function AdminProductsPage() {
       key: 'stock',
       label: 'Tồn kho',
       render: (item: Product) => (
-        <span className={item.stock === 0 ? 'text-red-500 font-medium' : ''}>
-          {item.stock || 0}
-        </span>
+        <div className="flex items-center gap-2">
+          <span className={item.quantity === 0 ? 'text-red-500 font-medium' : ''}>
+            {item.quantity || 0}
+          </span>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              navigate(`/admin/inventory/${item.id}?type=product`);
+            }}
+            className="p-1 text-accent-500 hover:text-primary rounded"
+            title="Xem nhật ký tồn kho"
+          >
+            <FileText className="w-4 h-4" />
+          </button>
+        </div>
       ),
     },
     {
